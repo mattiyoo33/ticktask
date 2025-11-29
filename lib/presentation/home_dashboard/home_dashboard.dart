@@ -20,7 +20,6 @@ class HomeDashboard extends StatefulWidget {
 
 class _HomeDashboardState extends State<HomeDashboard>
     with TickerProviderStateMixin {
-  bool _isLoading = false;
   late AnimationController _confettiController;
 
   // Mock user data
@@ -188,13 +187,10 @@ class _HomeDashboardState extends State<HomeDashboard>
   }
 
   Future<void> _refreshData() async {
-    setState(() => _isLoading = true);
     HapticFeedback.lightImpact();
 
     // Simulate API call
     await Future.delayed(const Duration(milliseconds: 1500));
-
-    setState(() => _isLoading = false);
   }
 
   void _onTaskComplete(Map<String, dynamic> task) {

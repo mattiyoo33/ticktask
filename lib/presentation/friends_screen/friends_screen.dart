@@ -10,7 +10,7 @@ import '../../widgets/custom_tab_bar.dart';
 import './widgets/add_friends_modal_widget.dart';
 import './widgets/empty_state_widget.dart';
 import './widgets/friend_card_widget.dart';
-import './widgets/friend_request_card_widget.dart';
+import './widgets/friends_request_card_widget.dart' show FriendRequestCardWidget;
 import './widgets/leaderboard_item_widget.dart';
 
 class FriendsScreen extends StatefulWidget {

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../presentation/splash_screen/splash_screen.dart';
+import '../presentation/login_screen/login_screen.dart';
+import '../presentation/register_screen/register_screen.dart';
 import '../presentation/task_list_screen/task_list_screen.dart';
 import '../presentation/home_dashboard/home_dashboard.dart';
 import '../presentation/task_creation_screen/task_creation_screen.dart';
@@ -7,8 +10,10 @@ import '../presentation/task_detail_screen/task_detail_screen.dart';
 import '../presentation/friends_screen/friends_screen.dart';
 
 class AppRoutes {
-  // TODO: Add your routes here
   static const String initial = '/';
+  static const String splash = '/splash';
+  static const String login = '/login';
+  static const String register = '/register';
   static const String taskList = '/task-list-screen';
   static const String homeDashboard = '/home-dashboard';
   static const String taskCreation = '/task-creation-screen';
@@ -17,13 +22,15 @@ class AppRoutes {
   static const String friends = '/friends-screen';
 
   static Map<String, WidgetBuilder> routes = {
-    initial: (context) => const HomeDashboard(),
+    initial: (context) => const SplashScreen(),
+    splash: (context) => const SplashScreen(),
+    login: (context) => const LoginScreen(),
+    register: (context) => const RegisterScreen(),
     taskList: (context) => const TaskListScreen(),
     homeDashboard: (context) => const HomeDashboard(),
     taskCreation: (context) => const TaskCreationScreen(),
     profile: (context) => const ProfileScreen(),
     taskDetail: (context) => const TaskDetailScreen(),
     friends: (context) => const FriendsScreen(),
-    // TODO: Add your other routes here
   };
 }
