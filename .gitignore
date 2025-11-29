@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 env.json
+
+# Add env.json to your .gitignore to keep credentials safe
+env.json
