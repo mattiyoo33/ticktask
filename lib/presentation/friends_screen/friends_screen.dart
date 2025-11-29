@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -13,168 +14,97 @@ import './widgets/friend_card_widget.dart';
 import './widgets/friends_request_card_widget.dart' show FriendRequestCardWidget;
 import './widgets/leaderboard_item_widget.dart';
 
-class FriendsScreen extends StatefulWidget {
+class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
 
   @override
-  State<FriendsScreen> createState() => _FriendsScreenState();
+  ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
 }
 
-class _FriendsScreenState extends State<FriendsScreen>
+class _FriendsScreenState extends ConsumerState<FriendsScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  bool _isLoading = false;
   String _searchQuery = '';
 
-  // Mock data
-  final List<Map<String, dynamic>> _friends = [
-    {
-      "id": 1,
-      "name": "Sarah Johnson",
-      "avatar":
-          "https://images.unsplash.com/photo-1652391584869-0408bf759537",
-      "semanticLabel":
-          "Young woman with long brown hair smiling at camera wearing casual white top",
-      "level": 12,
-      "xp": 2450,
-      "recentActivity": "Completed 'Morning Workout' task",
-      "isOnline": true,
-    },
-    {
-      "id": 2,
-      "name": "Mike Chen",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1ee3f5dd7-1762273615703.png",
-      "semanticLabel":
-          "Asian man with short black hair and beard wearing dark blue shirt",
-      "level": 8,
-      "xp": 1680,
-      "recentActivity": "Started a 7-day reading streak",
-      "isOnline": false,
-    },
-    {
-      "id": 3,
-      "name": "Emma Rodriguez",
-      "avatar": "https://images.unsplash.com/photo-1669987554988-3e4681612415",
-      "semanticLabel":
-          "Hispanic woman with curly hair wearing red lipstick and professional attire",
-      "level": 15,
-      "xp": 3200,
-      "recentActivity": "Achieved 'Productivity Master' badge",
-      "isOnline": true,
-    },
-    {
-      "id": 4,
-      "name": "David Kim",
-      "avatar":
-          "https://images.unsplash.com/photo-1492140377033-831754a4702f",
-      "semanticLabel":
-          "Young man with glasses and short dark hair wearing casual gray sweater",
-      "level": 6,
-      "xp": 980,
-      "recentActivity": "Completed daily meditation task",
-      "isOnline": false,
-    },
-  ];
+  // Get friends from database
+  List<Map<String, dynamic>> get _friends {
+    final friendsAsync = ref.watch(friendsProvider);
+    return friendsAsync.when(
+      data: (friends) => friends,
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
 
-  final List<Map<String, dynamic>> _incomingRequests = [
-    {
-      "id": 1,
-      "name": "Alex Thompson",
-      "avatar":
-          "https://images.unsplash.com/photo-1713810189168-c4d5340e975b",
-      "semanticLabel":
-          "Blonde woman with bright smile wearing casual blue top outdoors",
-      "timestamp": "2 hours ago",
-      "mutualFriends": 3,
-    },
-    {
-      "id": 2,
-      "name": "Jordan Lee",
-      "avatar": "https://img.rocket.new/generatedImages/rocket_gen_img_1d67f557b-1762249150720.png",
-      "semanticLabel":
-          "Young man with brown hair wearing white collared shirt smiling",
-      "timestamp": "1 day ago",
-      "mutualFriends": 1,
-    },
-  ];
+  // Get incoming friend requests from database
+  List<Map<String, dynamic>> get _incomingRequests {
+    final requestsAsync = ref.watch(incomingFriendRequestsProvider);
+    return requestsAsync.when(
+      data: (requests) => requests.map((req) {
+        final requester = req['requester'] as Map<String, dynamic>?;
+        return {
+          'id': req['id'],
+          'name': requester?['full_name'] ?? 'User',
+          'avatar': requester?['avatar_url'] ?? '',
+          'timestamp': _formatTimestamp(req['created_at']),
+          'friendship_id': req['id'],
+        };
+      }).toList(),
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
 
-  final List<Map<String, dynamic>> _outgoingRequests = [
-    {
-      "id": 1,
-      "name": "Lisa Park",
-      "avatar":
-          "https://images.unsplash.com/photo-1725121224951-46860d47987f",
-      "semanticLabel":
-          "Asian woman with long black hair wearing white top with natural lighting",
-      "timestamp": "3 days ago",
-      "mutualFriends": 2,
-    },
-  ];
+  // Get outgoing friend requests from database
+  List<Map<String, dynamic>> get _outgoingRequests {
+    final requestsAsync = ref.watch(outgoingFriendRequestsProvider);
+    return requestsAsync.when(
+      data: (requests) => requests.map((req) {
+        final friend = req['friend'] as Map<String, dynamic>?;
+        return {
+          'id': req['id'],
+          'name': friend?['full_name'] ?? 'User',
+          'avatar': friend?['avatar_url'] ?? '',
+          'timestamp': _formatTimestamp(req['created_at']),
+          'friendship_id': req['id'],
+        };
+      }).toList(),
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
 
-  final List<Map<String, dynamic>> _leaderboard = [
-    {
-      "id": 1,
-      "name": "Emma Rodriguez",
-      "avatar": "https://images.unsplash.com/photo-1669987554988-3e4681612415",
-      "semanticLabel":
-          "Hispanic woman with curly hair wearing red lipstick and professional attire",
-      "xp": 3200,
-      "level": 15,
-      "badges": ["emoji_events", "star", "local_fire_department"],
-      "isCurrentUser": false,
-    },
-    {
-      "id": 2,
-      "name": "You",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_152ea5f89-1762274365865.png",
-      "semanticLabel":
-          "Person with short hair wearing casual clothing in natural lighting",
-      "xp": 2850,
-      "level": 13,
-      "badges": ["star", "local_fire_department"],
-      "isCurrentUser": true,
-    },
-    {
-      "id": 3,
-      "name": "Sarah Johnson",
-      "avatar":
-          "https://images.unsplash.com/photo-1652391584869-0408bf759537",
-      "semanticLabel":
-          "Young woman with long brown hair smiling at camera wearing casual white top",
-      "xp": 2450,
-      "level": 12,
-      "badges": ["star"],
-      "isCurrentUser": false,
-    },
-    {
-      "id": 4,
-      "name": "Mike Chen",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1ee3f5dd7-1762273615703.png",
-      "semanticLabel":
-          "Asian man with short black hair and beard wearing dark blue shirt",
-      "xp": 1680,
-      "level": 8,
-      "badges": ["local_fire_department"],
-      "isCurrentUser": false,
-    },
-    {
-      "id": 5,
-      "name": "David Kim",
-      "avatar":
-          "https://images.unsplash.com/photo-1492140377033-831754a4702f",
-      "semanticLabel":
-          "Young man with glasses and short dark hair wearing casual gray sweater",
-      "xp": 980,
-      "level": 6,
-      "badges": [],
-      "isCurrentUser": false,
-    },
-  ];
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Recently';
+    try {
+      final date = timestamp is String ? DateTime.parse(timestamp) : timestamp as DateTime;
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}m ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}h ago';
+      } else {
+        return '${difference.inDays}d ago';
+      }
+    } catch (e) {
+      return 'Recently';
+    }
+  }
+
+  // Get leaderboard from database
+  List<Map<String, dynamic>> get _leaderboard {
+    final leaderboardAsync = ref.watch(leaderboardProvider);
+    return leaderboardAsync.when(
+      data: (leaderboard) => leaderboard,
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
+
 
   @override
   void initState() {
@@ -191,12 +121,10 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Future<void> _refreshFriends() async {
     HapticFeedback.lightImpact();
-    setState(() => _isLoading = true);
-
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
-
-    setState(() => _isLoading = false);
+    // Refresh providers
+    ref.invalidate(friendsProvider);
+    ref.invalidate(incomingFriendRequestsProvider);
+    ref.invalidate(outgoingFriendRequestsProvider);
   }
 
   void _toggleSearch() {
@@ -221,10 +149,14 @@ class _FriendsScreenState extends State<FriendsScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => AddFriendsModalWidget(
         onSearchUsers: () {
-          // Handle search users
+          Navigator.pushNamed(context, '/search-users');
         },
         onImportContacts: () {
-          // Handle import contacts
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Contact import coming soon!'),
+            ),
+          );
         },
       ),
     );
@@ -370,9 +302,9 @@ class _FriendsScreenState extends State<FriendsScreen>
             onMessage: () {
               // Open message thread
             },
-            onRemove: () {
+            onRemove: () async {
               // Show remove friend confirmation
-              _showRemoveFriendDialog(friend);
+              await _showRemoveFriendDialog(friend);
             },
           );
         },
@@ -501,64 +433,108 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
-  void _acceptFriendRequest(Map<String, dynamic> request) {
+  Future<void> _acceptFriendRequest(Map<String, dynamic> request) async {
     HapticFeedback.lightImpact();
-    setState(() {
-      _incomingRequests.remove(request);
-      // Add to friends list
-      _friends.add({
-        ...request,
-        "level": 1,
-        "xp": 0,
-        "recentActivity": "Just joined TickTask!",
-        "isOnline": true,
-      });
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${request['name']} is now your friend!'),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-      ),
-    );
+    
+    try {
+      final friendService = ref.read(friendServiceProvider);
+      final friendshipId = request['friendship_id'] as String? ?? request['id'] as String;
+      await friendService.acceptFriendRequest(friendshipId);
+      
+      // Refresh data
+      ref.invalidate(friendsProvider);
+      ref.invalidate(incomingFriendRequestsProvider);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${request['name']} is now your friend!'),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error accepting request: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
-  void _declineFriendRequest(Map<String, dynamic> request) {
+  Future<void> _declineFriendRequest(Map<String, dynamic> request) async {
     HapticFeedback.lightImpact();
-    setState(() {
-      _incomingRequests.remove(request);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Friend request declined'),
-      ),
-    );
+    
+    try {
+      final friendService = ref.read(friendServiceProvider);
+      final friendshipId = request['friendship_id'] as String? ?? request['id'] as String;
+      await friendService.rejectFriendRequest(friendshipId);
+      
+      // Refresh data
+      ref.invalidate(incomingFriendRequestsProvider);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Friend request declined'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error declining request: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
-  void _showRemoveFriendDialog(Map<String, dynamic> friend) {
+  Future<void> _showRemoveFriendDialog(Map<String, dynamic> friend) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove Friend'),
+        title: const Text('Remove Friend'),
         content: Text(
             'Are you sure you want to remove ${friend['name']} from your friends list?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                _friends.remove(friend);
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${friend['name']} removed from friends'),
-                ),
-              );
+              try {
+                final friendService = ref.read(friendServiceProvider);
+                final friendshipId = friend['friendship_id'] as String? ?? friend['id'] as String;
+                await friendService.removeFriend(friendshipId);
+                
+                // Refresh data
+                ref.invalidate(friendsProvider);
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${friend['name']} removed from friends'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error removing friend: ${e.toString()}'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             },
             child: Text(
               'Remove',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -8,14 +9,14 @@ import './widgets/difficulty_selection_widget.dart';
 import './widgets/quick_templates_widget.dart';
 import './widgets/recurring_task_widget.dart';
 
-class TaskCreationScreen extends StatefulWidget {
+class TaskCreationScreen extends ConsumerStatefulWidget {
   const TaskCreationScreen({super.key});
 
   @override
-  State<TaskCreationScreen> createState() => _TaskCreationScreenState();
+  ConsumerState<TaskCreationScreen> createState() => _TaskCreationScreenState();
 }
 
-class _TaskCreationScreenState extends State<TaskCreationScreen>
+class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
     with TickerProviderStateMixin {
   // Form controllers
   final TextEditingController _titleController = TextEditingController();
@@ -157,9 +158,6 @@ class _TaskCreationScreenState extends State<TaskCreationScreen>
     _saveButtonController.forward();
 
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 1500));
-
       // Calculate XP based on difficulty
       int xpReward = _selectedDifficulty == 'Easy'
           ? 10
@@ -167,28 +165,56 @@ class _TaskCreationScreenState extends State<TaskCreationScreen>
               ? 20
               : 30;
 
-      // Create task data
-      final taskData = {
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'difficulty': _selectedDifficulty,
-        'xpReward': xpReward,
-        'dueDate': _selectedDueDate?.toIso8601String(),
-        'isRecurring': _isRecurring,
-        'recurringFrequency': _isRecurring ? _recurringFrequency : null,
-        'selectedDays': _isRecurring && _recurringFrequency == 'Custom'
-            ? _selectedDays
-            : null,
-        'reminderEnabled': _reminderEnabled,
-        'reminderTime': _reminderEnabled
-            ? '${_reminderTime.hour}:${_reminderTime.minute}'
-            : null,
-        'collaborationEnabled': _collaborationEnabled,
-        'category': _selectedCategory,
-        'createdAt': DateTime.now().toIso8601String(),
-        'isCompleted': false,
-      };
+      // Get TaskService and create task in database
+      final taskService = ref.read(taskServiceProvider);
+      
+      // Parse due time if reminder is enabled
+      String? dueTime;
+      if (_reminderEnabled) {
+        dueTime = '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}';
+      }
+      
+      // Calculate next occurrence for recurring tasks
+      DateTime? nextOccurrence;
+      if (_isRecurring && _selectedDueDate != null) {
+        switch (_recurringFrequency) {
+          case 'Daily':
+            nextOccurrence = _selectedDueDate!.add(const Duration(days: 1));
+            break;
+          case 'Weekly':
+            nextOccurrence = _selectedDueDate!.add(const Duration(days: 7));
+            break;
+          case 'Monthly':
+            nextOccurrence = DateTime(
+              _selectedDueDate!.year,
+              _selectedDueDate!.month + 1,
+              _selectedDueDate!.day,
+            );
+            break;
+          default:
+            nextOccurrence = _selectedDueDate;
+        }
+      }
+
+      // Create task in database
+      await taskService.createTask(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        category: _selectedCategory,
+        difficulty: _selectedDifficulty,
+        dueDate: _selectedDueDate,
+        dueTime: dueTime,
+        xpReward: xpReward,
+        isRecurring: _isRecurring,
+        recurrenceFrequency: _isRecurring ? _recurringFrequency : null,
+        recurrenceInterval: 1,
+        nextOccurrence: nextOccurrence,
+        isCollaborative: _collaborationEnabled,
+      );
+
+      // Refresh providers to show new task
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
 
       // Show success message
       if (mounted) {
@@ -223,7 +249,7 @@ class _TaskCreationScreenState extends State<TaskCreationScreen>
         );
 
         // Navigate back to home
-        Navigator.pushReplacementNamed(context, '/home-dashboard');
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -237,10 +263,10 @@ class _TaskCreationScreenState extends State<TaskCreationScreen>
                   size: 20,
                 ),
                 SizedBox(width: 2.w),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Failed to create task. Please try again.',
-                    style: TextStyle(color: Colors.white),
+                    'Failed to create task: ${e.toString()}',
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ],

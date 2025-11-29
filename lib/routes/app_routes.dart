@@ -8,6 +8,7 @@ import '../presentation/task_creation_screen/task_creation_screen.dart';
 import '../presentation/profile_screen/profile_screen.dart';
 import '../presentation/task_detail_screen/task_detail_screen.dart';
 import '../presentation/friends_screen/friends_screen.dart';
+import '../presentation/friends_screen/widgets/search_users_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const String profile = '/profile-screen';
   static const String taskDetail = '/task-detail-screen';
   static const String friends = '/friends-screen';
+  static const String searchUsers = '/search-users';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -32,5 +34,6 @@ class AppRoutes {
     profile: (context) => const ProfileScreen(),
     taskDetail: (context) => const TaskDetailScreen(),
     friends: (context) => const FriendsScreen(),
+    searchUsers: (context) => const SearchUsersScreen(),
   };
 }

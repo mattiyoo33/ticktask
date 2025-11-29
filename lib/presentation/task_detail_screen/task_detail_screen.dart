@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -12,118 +13,147 @@ import './widgets/streak_progress_widget.dart';
 import './widgets/task_header_widget.dart';
 import './widgets/task_info_widget.dart';
 
-class TaskDetailScreen extends StatefulWidget {
+class TaskDetailScreen extends ConsumerStatefulWidget {
   const TaskDetailScreen({super.key});
 
   @override
-  State<TaskDetailScreen> createState() => _TaskDetailScreenState();
+  ConsumerState<TaskDetailScreen> createState() => _TaskDetailScreenState();
 }
 
-class _TaskDetailScreenState extends State<TaskDetailScreen> {
+class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   bool _isLoading = false;
   bool _showCelebration = false;
   int _xpGained = 0;
+  bool _isInitialLoading = true;
+  
+  Map<String, dynamic>? _taskData;
+  Map<String, dynamic>? _streakData;
+  List<Map<String, dynamic>> _participants = [];
+  List<Map<String, dynamic>> _comments = [];
+  String? _taskId;
 
-  // Mock task data
-  final Map<String, dynamic> _taskData = {
-    "id": 1,
-    "title": "Complete Flutter Project Documentation",
-    "description":
-        """Write comprehensive documentation for the TickTask Flutter application including:
-    
-• User guide with screenshots
-• Developer setup instructions
-• API documentation
-• Testing procedures
-• Deployment guidelines
-    
-This documentation will help new team members understand the project structure and contribute effectively.""",
-    "dueDate": DateTime.now().add(Duration(days: 2, hours: 14, minutes: 30)),
-    "difficulty": "Hard",
-    "xpValue": 30,
-    "createdDate": DateTime.now().subtract(Duration(days: 5)),
-    "isRecurring": true,
-    "frequency": "Weekly",
-    "nextOccurrence": DateTime.now().add(Duration(days: 9)),
-    "status": "active", // active, completed, scheduled
-    "isCollaborative": true,
-    "currentStreak": 5,
-    "maxStreak": 12,
-    "weekProgress": [true, true, false, true, true, false, false],
-    "hasStreakBonus": true,
-  };
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInitialLoading && _taskId == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadTaskData();
+      });
+    }
+  }
 
-  final List<Map<String, dynamic>> _participants = [
-    {
-      "id": 1,
-      "name": "Sarah Johnson",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_11b715d60-1762273834012.png",
-      "semanticLabel":
-          "Professional headshot of a woman with shoulder-length brown hair wearing a navy blazer",
-      "isCompleted": true,
-      "contribution": 45,
-    },
-    {
-      "id": 2,
-      "name": "Michael Chen",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_18044ba5a-1762273641333.png",
-      "semanticLabel":
-          "Professional headshot of an Asian man with short black hair wearing a gray suit",
-      "isCompleted": false,
-      "contribution": 30,
-    },
-    {
-      "id": 3,
-      "name": "Emily Rodriguez",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1beb9fc75-1762273370028.png",
-      "semanticLabel":
-          "Professional headshot of a Hispanic woman with long dark hair wearing a white blouse",
-      "isCompleted": true,
-      "contribution": 25,
-    },
-  ];
+  Future<void> _loadTaskData() async {
+    // Get task from route arguments
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args == null) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Task not found')),
+        );
+      }
+      return;
+    }
 
-  final List<Map<String, dynamic>> _comments = [
-    {
-      "id": 1,
-      "author": "Sarah Johnson",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_11b715d60-1762273834012.png",
-      "semanticLabel":
-          "Professional headshot of a woman with shoulder-length brown hair wearing a navy blazer",
-      "content":
-          "I've completed the user guide section with screenshots. The API documentation is next on my list.",
-      "timestamp": DateTime.now().subtract(Duration(hours: 2)),
-    },
-    {
-      "id": 2,
-      "author": "Michael Chen",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_18044ba5a-1762273641333.png",
-      "semanticLabel":
-          "Professional headshot of an Asian man with short black hair wearing a gray suit",
-      "content":
-          "Great work Sarah! I'm working on the developer setup instructions. Should have it ready by tomorrow.",
-      "timestamp": DateTime.now().subtract(Duration(hours: 1, minutes: 30)),
-    },
-    {
-      "id": 3,
-      "author": "Emily Rodriguez",
-      "avatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1beb9fc75-1762273370028.png",
-      "semanticLabel":
-          "Professional headshot of a Hispanic woman with long dark hair wearing a white blouse",
-      "content":
-          "I can handle the testing procedures section. Let me know if you need any specific test cases documented.",
-      "timestamp": DateTime.now().subtract(Duration(minutes: 45)),
-    },
-  ];
+    final taskArg = args as Map<String, dynamic>;
+    _taskId = taskArg['id']?.toString();
+
+    if (_taskId == null) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid task ID')),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isInitialLoading = true;
+    });
+
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      
+      // Fetch task data
+      final task = await taskService.getTaskById(_taskId!);
+      if (task == null) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Task not found')),
+          );
+        }
+        return;
+      }
+
+      // Fetch streak data
+      final streak = await taskService.getTaskStreak(_taskId!);
+
+      // Fetch participants (only if collaborative)
+      List<Map<String, dynamic>> participants = [];
+      if (task['is_collaborative'] == true) {
+        participants = await taskService.getTaskParticipants(_taskId!);
+      }
+
+      // Fetch comments (only if collaborative)
+      List<Map<String, dynamic>> comments = [];
+      if (task['is_collaborative'] == true) {
+        comments = await taskService.getTaskComments(_taskId!);
+      }
+
+      setState(() {
+        _taskData = task;
+        _streakData = streak;
+        _participants = _transformParticipants(participants);
+        _comments = _transformComments(comments);
+        _isInitialLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isInitialLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading task: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  List<Map<String, dynamic>> _transformParticipants(List<Map<String, dynamic>> participants) {
+    return participants.map((p) {
+      final profile = p['profiles'] as Map<String, dynamic>?;
+      return {
+        'id': p['user_id'],
+        'name': profile?['full_name'] ?? 'Unknown',
+        'avatar': profile?['avatar_url'] ?? '',
+        'semanticLabel': 'User avatar',
+        'isCompleted': false, // TODO: Check if user completed the task
+        'contribution': 0, // TODO: Calculate contribution
+      };
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _transformComments(List<Map<String, dynamic>> comments) {
+    return comments.map((c) {
+      final profile = c['profiles'] as Map<String, dynamic>?;
+      return {
+        'id': c['id'],
+        'author': profile?['full_name'] ?? 'Unknown',
+        'avatar': profile?['avatar_url'] ?? '',
+        'semanticLabel': 'User avatar',
+        'content': c['content'] ?? '',
+        'timestamp': c['created_at'] != null 
+            ? DateTime.parse(c['created_at'] as String)
+            : DateTime.now(),
+      };
+    }).toList();
+  }
 
   TaskStatus get _currentTaskStatus {
-    switch (_taskData['status'] as String) {
+    if (_taskData == null) return TaskStatus.active;
+    switch (_taskData!['status'] as String?) {
       case 'completed':
         return TaskStatus.completed;
       case 'scheduled':
@@ -246,8 +276,9 @@ This documentation will help new team members understand the project structure a
   }
 
   void _shareTask() {
-    final taskTitle = _taskData['title'] as String;
-    final taskDescription = _taskData['description'] as String;
+    if (_taskData == null) return;
+    final taskTitle = _taskData!['title'] as String? ?? 'Untitled Task';
+    final taskDescription = _taskData!['description'] as String? ?? '';
     final shareText = 'Check out this task: $taskTitle\n\n$taskDescription';
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -276,41 +307,52 @@ This documentation will help new team members understand the project structure a
     );
   }
 
-  void _deleteTask() {
+  void _deleteTask() async {
+    if (_taskId == null) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete Task'),
-        content: Text(
+        title: const Text('Delete Task'),
+        content: const Text(
             'Are you sure you want to delete this task? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.pop(context); // Go back to previous screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Task deleted'),
-                  behavior: SnackBarBehavior.floating,
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Task restored'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
+              try {
+                final taskService = ref.read(taskServiceProvider);
+                await taskService.deleteTask(_taskId!);
+                
+                // Refresh task lists
+                ref.invalidate(allTasksProvider);
+                ref.invalidate(todaysTasksProvider);
+                
+                if (mounted) {
+                  Navigator.pop(context); // Go back to previous screen
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Task deleted'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting task: ${e.toString()}'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -318,84 +360,163 @@ This documentation will help new team members understand the project structure a
   }
 
   void _handleMarkComplete() async {
+    if (_taskId == null || _taskData == null) return;
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(Duration(milliseconds: 800));
-
-    setState(() {
-      _isLoading = false;
-      _taskData['status'] = 'completed';
-      _xpGained = _taskData['xpValue'] as int;
-      if (_taskData['hasStreakBonus'] as bool) {
-        _xpGained += 25; // Streak bonus
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      await taskService.completeTask(_taskId!);
+      
+      final xpReward = _taskData!['xp_reward'] as int? ?? 0;
+      final streakBonus = _streakData?['has_streak_bonus'] == true ? 25 : 0;
+      
+      // Refresh task data
+      await _loadTaskData();
+      
+      // Refresh task lists
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      
+      setState(() {
+        _isLoading = false;
+        _xpGained = xpReward + streakBonus;
+        _showCelebration = true;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing task: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
-      _showCelebration = true;
-    });
+    }
   }
 
   void _handleMarkIncomplete() async {
+    if (_taskId == null) return;
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(Duration(milliseconds: 500));
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      await taskService.updateTask(_taskId!, status: 'active');
+      
+      // Refresh task data
+      await _loadTaskData();
+      
+      // Refresh task lists
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      
+      setState(() {
+        _isLoading = false;
+      });
 
-    setState(() {
-      _isLoading = false;
-      _taskData['status'] = 'active';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Task marked as incomplete'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task marked as incomplete'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating task: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _handleStartTask() async {
+    if (_taskId == null) return;
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(Duration(milliseconds: 500));
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      await taskService.updateTask(_taskId!, status: 'active');
+      
+      // Refresh task data
+      await _loadTaskData();
+      
+      setState(() {
+        _isLoading = false;
+      });
 
-    setState(() {
-      _isLoading = false;
-      _taskData['status'] = 'active';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Task started!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task started!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error starting task: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
-  void _handleAddComment(String comment) {
-    setState(() {
-      _comments.insert(0, {
-        "id": _comments.length + 1,
-        "author": "You",
-        "avatar": "",
-        "semanticLabel": "Your avatar",
-        "content": comment,
-        "timestamp": DateTime.now(),
-      });
-    });
+  void _handleAddComment(String comment) async {
+    if (_taskId == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Comment added'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      final newComment = await taskService.addComment(_taskId!, comment);
+      
+      // Transform and add to comments list
+      final transformedComment = _transformComments([newComment]).first;
+      setState(() {
+        _comments.insert(0, transformedComment);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Comment added'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding comment: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _onCelebrationComplete() {
@@ -409,6 +530,40 @@ This documentation will help new team members understand the project structure a
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    if (_isInitialLoading || _taskData == null) {
+      return Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: CustomAppBar(
+          variant: CustomAppBarVariant.minimal,
+          showBackButton: true,
+          onBackPressed: () => Navigator.pop(context),
+        ),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Parse dates from database
+    final dueDate = _taskData!['due_date'] != null
+        ? DateTime.parse(_taskData!['due_date'] as String)
+        : null;
+    final createdDate = _taskData!['created_at'] != null
+        ? DateTime.parse(_taskData!['created_at'] as String)
+        : DateTime.now();
+    final nextOccurrence = _taskData!['next_occurrence'] != null
+        ? DateTime.parse(_taskData!['next_occurrence'] as String)
+        : null;
+
+    // Get streak data (default to 0 if no streak exists)
+    final currentStreak = _streakData?['current_streak'] as int? ?? 0;
+    final maxStreak = _streakData?['max_streak'] as int? ?? 0;
+    final weekProgress = _streakData?['week_progress'] as List<dynamic>?;
+    final weekProgressList = weekProgress != null
+        ? weekProgress.cast<bool>()
+        : List<bool>.filled(7, false);
+    final hasStreakBonus = _streakData?['has_streak_bonus'] == true;
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: CustomAppBar(
@@ -419,12 +574,12 @@ This documentation will help new team members understand the project structure a
       body: Stack(
         children: [
           SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
                 // Task Header
                 TaskHeaderWidget(
-                  title: _taskData['title'] as String,
+                  title: _taskData!['title'] as String? ?? 'Untitled Task',
                   onEdit: _handleEdit,
                   onMore: _handleMore,
                 ),
@@ -433,36 +588,36 @@ This documentation will help new team members understand the project structure a
 
                 // Task Information
                 TaskInfoWidget(
-                  description: _taskData['description'] as String,
-                  dueDate: _taskData['dueDate'] as DateTime,
-                  difficulty: _taskData['difficulty'] as String,
-                  xpValue: _taskData['xpValue'] as int,
-                  createdDate: _taskData['createdDate'] as DateTime,
-                  isRecurring: _taskData['isRecurring'] as bool,
-                  frequency: _taskData['frequency'] as String?,
-                  nextOccurrence: _taskData['nextOccurrence'] as DateTime?,
+                  description: _taskData!['description'] as String? ?? '',
+                  dueDate: dueDate ?? DateTime.now().add(const Duration(days: 30)),
+                  difficulty: _taskData!['difficulty'] as String? ?? 'Medium',
+                  xpValue: _taskData!['xp_reward'] as int? ?? 0,
+                  createdDate: createdDate,
+                  isRecurring: _taskData!['is_recurring'] == true,
+                  frequency: _taskData!['recurrence_frequency'] as String?,
+                  nextOccurrence: nextOccurrence,
                 ),
 
-                // Streak Progress
-                StreakProgressWidget(
-                  currentStreak: _taskData['currentStreak'] as int,
-                  maxStreak: _taskData['maxStreak'] as int,
-                  weekProgress:
-                      (_taskData['weekProgress'] as List).cast<bool>(),
-                  hasStreakBonus: _taskData['hasStreakBonus'] as bool,
-                ),
+                // Streak Progress (only show if streak exists)
+                if (currentStreak > 0 || maxStreak > 0)
+                  StreakProgressWidget(
+                    currentStreak: currentStreak,
+                    maxStreak: maxStreak,
+                    weekProgress: weekProgressList,
+                    hasStreakBonus: hasStreakBonus,
+                  ),
 
                 // Participants (for collaborative tasks)
                 ParticipantsWidget(
                   participants: _participants,
-                  isCollaborative: _taskData['isCollaborative'] as bool,
+                  isCollaborative: _taskData!['is_collaborative'] == true,
                 ),
 
                 // Comments Section
                 CommentsSectionWidget(
                   comments: _comments,
                   onAddComment: _handleAddComment,
-                  isCollaborative: _taskData['isCollaborative'] as bool,
+                  isCollaborative: _taskData!['is_collaborative'] == true,
                 ),
 
                 SizedBox(height: 2.h),

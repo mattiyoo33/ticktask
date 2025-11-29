@@ -89,153 +89,75 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return (100 * (level * level * 1.5)).round();
   }
 
-  // Mock statistics data
-  final Map<String, dynamic> statisticsData = {
-    "totalTasks": 247,
-    "currentStreak": 15,
-    "longestStreak": 28,
-    "completionRate": 87,
-    "badgesEarned": 12,
-    "friendCount": 23,
-    "totalXP": 8450,
-  };
+  // Get real statistics from database
+  Map<String, dynamic> get statisticsData {
+    final tasksAsync = ref.watch(allTasksProvider);
+    final userProfileAsync = ref.watch(userProfileFromDbProvider);
+    final friendsAsync = ref.watch(friendsProvider);
+    
+    return tasksAsync.when(
+      data: (tasks) {
+        final userProfile = userProfileAsync.value;
+        final friends = friendsAsync.value ?? [];
+        
+        final totalTasks = tasks.length;
+        final completedTasks = tasks.where((t) => t['status'] == 'completed').length;
+        final completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
+        final totalXP = userProfile?['total_xp'] as int? ?? 0;
+        final friendCount = friends.length;
+        
+        // Calculate current streak (simplified - can be enhanced)
+        int currentStreak = 0;
+        int longestStreak = 0;
+        
+        return {
+          "totalTasks": totalTasks,
+          "currentStreak": currentStreak,
+          "longestStreak": longestStreak,
+          "completionRate": completionRate,
+          "badgesEarned": 0, // TODO: Implement badges
+          "friendCount": friendCount,
+          "totalXP": totalXP,
+        };
+      },
+      loading: () => {
+        "totalTasks": 0,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "completionRate": 0,
+        "badgesEarned": 0,
+        "friendCount": 0,
+        "totalXP": 0,
+      },
+      error: (_, __) => {
+        "totalTasks": 0,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "completionRate": 0,
+        "badgesEarned": 0,
+        "friendCount": 0,
+        "totalXP": 0,
+      },
+    );
+  }
 
-  // Mock achievements data
-  final List<Map<String, dynamic>> achievements = [
-    {
-      "id": 1,
-      "title": "First Steps",
-      "description": "Complete your first task",
-      "icon": "flag",
-      "isUnlocked": true,
-      "unlockedDate": "Jan 15, 2024",
-      "progress": null,
-    },
-    {
-      "id": 2,
-      "title": "Streak Master",
-      "description": "Maintain a 7-day streak",
-      "icon": "local_fire_department",
-      "isUnlocked": true,
-      "unlockedDate": "Feb 3, 2024",
-      "progress": null,
-    },
-    {
-      "id": 3,
-      "title": "Social Butterfly",
-      "description": "Add 10 friends",
-      "icon": "people",
-      "isUnlocked": true,
-      "unlockedDate": "Mar 12, 2024",
-      "progress": null,
-    },
-    {
-      "id": 4,
-      "title": "Century Club",
-      "description": "Complete 100 tasks",
-      "icon": "military_tech",
-      "isUnlocked": true,
-      "unlockedDate": "Apr 8, 2024",
-      "progress": null,
-    },
-    {
-      "id": 5,
-      "title": "Level Up",
-      "description": "Reach level 10",
-      "icon": "star",
-      "isUnlocked": true,
-      "unlockedDate": "May 20, 2024",
-      "progress": null,
-    },
-    {
-      "id": 6,
-      "title": "Perfectionist",
-      "description": "Complete 50 hard tasks",
-      "icon": "diamond",
-      "isUnlocked": false,
-      "unlockedDate": null,
-      "progress": 0.76,
-    },
-    {
-      "id": 7,
-      "title": "Marathon Runner",
-      "description": "Maintain a 30-day streak",
-      "icon": "directions_run",
-      "isUnlocked": false,
-      "unlockedDate": null,
-      "progress": 0.5,
-    },
-    {
-      "id": 8,
-      "title": "Team Player",
-      "description": "Complete 25 collaborative tasks",
-      "icon": "group_work",
-      "isUnlocked": false,
-      "unlockedDate": null,
-      "progress": 0.32,
-    },
-    {
-      "id": 9,
-      "title": "XP Hunter",
-      "description": "Earn 10,000 total XP",
-      "icon": "trending_up",
-      "isUnlocked": false,
-      "unlockedDate": null,
-      "progress": 0.845,
-    },
-  ];
+  // Get achievements (currently empty - can be enhanced with badge system)
+  List<Map<String, dynamic>> get achievements {
+    // TODO: Implement achievements/badges system
+    return [];
+  }
 
-  // Mock activity history data
-  final List<Map<String, dynamic>> activities = [
-    {
-      "id": 1,
-      "type": "task_completed",
-      "title": "Morning Workout",
-      "description": "Completed daily exercise routine",
-      "timestamp": "2 hours ago",
-      "xpGained": 20,
-    },
-    {
-      "id": 2,
-      "type": "streak_achieved",
-      "title": "15-Day Streak!",
-      "description": "Maintained your daily task completion streak",
-      "timestamp": "1 day ago",
-      "xpGained": 25,
-    },
-    {
-      "id": 3,
-      "type": "task_completed",
-      "title": "Project Planning",
-      "description": "Finished quarterly project roadmap",
-      "timestamp": "2 days ago",
-      "xpGained": 30,
-    },
-    {
-      "id": 4,
-      "type": "badge_earned",
-      "title": "Level Up Badge",
-      "description": "Reached level 12 milestone",
-      "timestamp": "3 days ago",
-      "xpGained": null,
-    },
-    {
-      "id": 5,
-      "type": "task_completed",
-      "title": "Read Chapter 5",
-      "description": "Completed reading assignment",
-      "timestamp": "4 days ago",
-      "xpGained": 10,
-    },
-    {
-      "id": 6,
-      "type": "task_completed",
-      "title": "Team Meeting",
-      "description": "Attended weekly team sync",
-      "timestamp": "5 days ago",
-      "xpGained": 15,
-    },
-  ];
+
+  // Get activity history from database
+  List<Map<String, dynamic>> get activities {
+    final activitiesAsync = ref.watch(recentActivitiesProvider);
+    return activitiesAsync.when(
+      data: (activities) => activities,
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

@@ -118,28 +118,38 @@ ALTER TABLE public.task_participants ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Users can view task participants" ON public.task_participants;
+DROP POLICY IF EXISTS "Task owners can view participants" ON public.task_participants;
 DROP POLICY IF EXISTS "Users can join tasks" ON public.task_participants;
 DROP POLICY IF EXISTS "Users can leave tasks" ON public.task_participants;
 
--- Policies
+-- Create helper function to check task ownership (avoids RLS recursion)
+CREATE OR REPLACE FUNCTION public.user_owns_task(p_task_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.tasks
+    WHERE id = p_task_id AND user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Policies (using helper function to avoid recursion)
+-- Policy 1: Users can see themselves as participants
 CREATE POLICY "Users can view task participants"
   ON public.task_participants FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.tasks 
-      WHERE tasks.id = task_participants.task_id 
-      AND (tasks.user_id = auth.uid() OR tasks.is_collaborative = true)
-    )
-  );
+  USING (auth.uid() = user_id);
+
+-- Policy 2: Task owners can see all participants (uses function to avoid recursion)
+CREATE POLICY "Task owners can view participants"
+  ON public.task_participants FOR SELECT
+  USING (public.user_owns_task(task_id));
 
 CREATE POLICY "Users can join tasks"
   ON public.task_participants FOR INSERT
   WITH CHECK (
-    auth.uid() = user_id AND
-    EXISTS (
-      SELECT 1 FROM public.tasks 
-      WHERE tasks.id = task_id AND tasks.is_collaborative = true
-    )
+    auth.uid() = user_id
+    -- Note: Task must be collaborative, but we check this at application level
+    -- to avoid circular policy dependency
   );
 
 CREATE POLICY "Users can leave tasks"
@@ -151,13 +161,14 @@ CREATE INDEX IF NOT EXISTS idx_task_participants_task_id ON public.task_particip
 CREATE INDEX IF NOT EXISTS idx_task_participants_user_id ON public.task_participants(user_id);
 
 -- Now create the collaborative tasks policy (after task_participants table exists)
+-- Use a simple IN subquery to avoid policy recursion
 CREATE POLICY "Users can view collaborative tasks"
   ON public.tasks FOR SELECT
   USING (
     is_collaborative = true AND 
-    EXISTS (
-      SELECT 1 FROM public.task_participants 
-      WHERE task_id = tasks.id AND user_id = auth.uid()
+    id IN (
+      SELECT task_id FROM public.task_participants tp
+      WHERE tp.user_id = auth.uid()
     )
   );
 
@@ -223,12 +234,17 @@ ALTER TABLE public.task_streaks ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Users can view own streaks" ON public.task_streaks;
+DROP POLICY IF EXISTS "Users can create own streaks" ON public.task_streaks;
 DROP POLICY IF EXISTS "Users can update own streaks" ON public.task_streaks;
 
 -- Policies
 CREATE POLICY "Users can view own streaks"
   ON public.task_streaks FOR SELECT
   USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own streaks"
+  ON public.task_streaks FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own streaks"
   ON public.task_streaks FOR UPDATE

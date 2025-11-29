@@ -162,7 +162,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     Navigator.pushNamed(context, '/task-detail-screen', arguments: task);
   }
 
-  void _onTaskDelete(Map<String, dynamic> task) {
+  Future<void> _onTaskDelete(Map<String, dynamic> task) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -174,14 +174,31 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _todaysTasks.removeWhere((t) => t['id'] == task['id']);
-              });
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Task deleted')),
-              );
+              try {
+                final taskService = ref.read(taskServiceProvider);
+                final taskId = task['id'] as String;
+                await taskService.deleteTask(taskId);
+                
+                // Refresh data
+                ref.invalidate(todaysTasksProvider);
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Task deleted')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting task: ${e.toString()}'),
+                      backgroundColor: AppTheme.errorLight,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Delete'),
           ),
@@ -199,13 +216,13 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
   }
 
   MascotState _getMascotState() {
-    final completedTasks =
-        _todaysTasks.where((task) => task['isCompleted'] == true).length;
-    final totalTasks = _todaysTasks.length;
+    final tasks = _todaysTasks;
+    final completedTasks = tasks.where((task) => task['isCompleted'] == true).length;
+    final totalTasks = tasks.length;
 
     if (completedTasks == totalTasks && totalTasks > 0) {
       return MascotState.celebrating;
-    } else if (completedTasks > totalTasks / 2) {
+    } else if (completedTasks > totalTasks / 2 && totalTasks > 0) {
       return MascotState.encouraging;
     } else {
       return MascotState.greeting;

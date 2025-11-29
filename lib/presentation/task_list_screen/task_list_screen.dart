@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
 
@@ -12,14 +13,14 @@ import './widgets/empty_state_widget.dart';
 import './widgets/search_filter_bar_widget.dart';
 import './widgets/task_section_widget.dart';
 
-class TaskListScreen extends StatefulWidget {
+class TaskListScreen extends ConsumerStatefulWidget {
   const TaskListScreen({super.key});
 
   @override
-  State<TaskListScreen> createState() => _TaskListScreenState();
+  ConsumerState<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _TaskListScreenState extends State<TaskListScreen>
+class _TaskListScreenState extends ConsumerState<TaskListScreen>
     with TickerProviderStateMixin {
   String _searchQuery = '';
   TaskFilter _currentFilter = TaskFilter.all;
@@ -29,102 +30,41 @@ class _TaskListScreenState extends State<TaskListScreen>
   bool _isRefreshing = false;
   late AnimationController _confettiController;
 
-  // Mock task data
-  final List<Map<String, dynamic>> _allTasks = [
-    {
-      "id": "1",
-      "title": "Complete Flutter Project",
-      "description":
-          "Finish the task management app with all features including animations and offline support.",
-      "dueDate": DateTime.now().subtract(const Duration(days: 1)),
-      "difficulty": "Hard",
-      "status": "overdue",
-      "isRecurring": false,
-      "xpReward": 30,
-      "category": "Work",
-      "createdAt": DateTime.now().subtract(const Duration(days: 5)),
-    },
-    {
-      "id": "2",
-      "title": "Morning Workout",
-      "description": "30-minute cardio session and strength training routine.",
-      "dueDate": DateTime.now(),
-      "difficulty": "Medium",
-      "status": "active",
-      "isRecurring": true,
-      "streak": 5,
-      "xpReward": 20,
-      "category": "Health",
-      "createdAt": DateTime.now().subtract(const Duration(days: 3)),
-    },
-    {
-      "id": "3",
-      "title": "Read Daily Chapter",
-      "description":
-          "Continue reading 'Atomic Habits' - Chapter 7: The Secret to Self-Control.",
-      "dueDate": DateTime.now(),
-      "difficulty": "Easy",
-      "status": "active",
-      "isRecurring": true,
-      "streak": 12,
-      "xpReward": 10,
-      "category": "Learning",
-      "createdAt": DateTime.now().subtract(const Duration(days: 2)),
-    },
-    {
-      "id": "4",
-      "title": "Team Meeting Preparation",
-      "description":
-          "Prepare presentation slides and review project status for weekly team sync.",
-      "dueDate": DateTime.now().add(const Duration(days: 1)),
-      "difficulty": "Medium",
-      "status": "active",
-      "isRecurring": false,
-      "xpReward": 20,
-      "category": "Work",
-      "createdAt": DateTime.now().subtract(const Duration(days: 1)),
-    },
-    {
-      "id": "5",
-      "title": "Grocery Shopping",
-      "description":
-          "Buy ingredients for meal prep: chicken, vegetables, rice, and healthy snacks.",
-      "dueDate": DateTime.now().add(const Duration(days: 2)),
-      "difficulty": "Easy",
-      "status": "active",
-      "isRecurring": false,
-      "xpReward": 10,
-      "category": "Personal",
-      "createdAt": DateTime.now(),
-    },
-    {
-      "id": "6",
-      "title": "Learn New Design Patterns",
-      "description":
-          "Study and implement Repository pattern in current Flutter project.",
-      "dueDate": DateTime.now().add(const Duration(days: 7)),
-      "difficulty": "Hard",
-      "status": "active",
-      "isRecurring": false,
-      "xpReward": 30,
-      "category": "Learning",
-      "createdAt": DateTime.now(),
-    },
-    {
-      "id": "7",
-      "title": "Call Mom",
-      "description":
-          "Weekly check-in call with family to catch up on recent events.",
-      "dueDate": DateTime.now().subtract(const Duration(hours: 2)),
-      "difficulty": "Easy",
-      "status": "completed",
-      "isRecurring": true,
-      "streak": 8,
-      "xpReward": 10,
-      "category": "Personal",
-      "createdAt": DateTime.now().subtract(const Duration(days: 7)),
-    },
-  ];
+  // Get all tasks from database
+  List<Map<String, dynamic>> get _allTasks {
+    final tasksAsync = ref.watch(allTasksProvider);
+    return tasksAsync.when(
+      data: (tasks) => tasks.map((task) {
+        final dueDate = task['due_date'] != null 
+            ? DateTime.parse(task['due_date'] as String)
+            : null;
+        final createdAt = task['created_at'] != null
+            ? DateTime.parse(task['created_at'] as String)
+            : DateTime.now();
+        
+        // Determine status
+        String status = task['status'] as String? ?? 'active';
+        if (status == 'active' && dueDate != null && dueDate.isBefore(DateTime.now())) {
+          status = 'overdue';
+        }
+        
+        return {
+          'id': task['id'].toString(),
+          'title': task['title'] ?? '',
+          'description': task['description'] ?? '',
+          'dueDate': dueDate,
+          'difficulty': task['difficulty'] ?? 'Medium',
+          'status': status,
+          'isRecurring': task['is_recurring'] ?? false,
+          'xpReward': task['xp_reward'] ?? 10,
+          'category': task['category'] ?? '',
+          'createdAt': createdAt,
+        };
+      }).toList(),
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
 
   @override
   void initState() {
@@ -283,7 +223,10 @@ class _TaskListScreenState extends State<TaskListScreen>
     setState(() => _isRefreshing = true);
     HapticFeedback.mediumImpact();
 
-    // Simulate network refresh
+    // Refresh all providers
+    ref.invalidate(allTasksProvider);
+    ref.invalidate(todaysTasksProvider);
+    ref.invalidate(recentActivitiesProvider);
     await Future.delayed(const Duration(milliseconds: 1500));
 
     setState(() => _isRefreshing = false);
@@ -334,17 +277,30 @@ class _TaskListScreenState extends State<TaskListScreen>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _allTasks.removeWhere((t) => t['id'] == task['id']);
-              });
+            onPressed: () async {
               Navigator.pop(context);
-              Fluttertoast.showToast(
-                msg: "Task deleted",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-              );
-              HapticFeedback.heavyImpact();
+              try {
+                final taskService = ref.read(taskServiceProvider);
+                final taskId = task['id'].toString();
+                await taskService.deleteTask(taskId);
+                
+                // Refresh data
+                ref.invalidate(allTasksProvider);
+                ref.invalidate(todaysTasksProvider);
+                
+                Fluttertoast.showToast(
+                  msg: "Task deleted",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                );
+                HapticFeedback.heavyImpact();
+              } catch (e) {
+                Fluttertoast.showToast(
+                  msg: "Error deleting task: ${e.toString()}",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -399,49 +355,78 @@ class _TaskListScreenState extends State<TaskListScreen>
     });
   }
 
-  void _handleCompleteSelected() {
+  Future<void> _handleCompleteSelected() async {
     final selectedTasks = _allTasks
         .where((task) => _selectedTaskIds.contains(task['id'].toString()))
         .toList();
 
-    setState(() {
+    try {
+      final taskService = ref.read(taskServiceProvider);
       for (final task in selectedTasks) {
-        final index = _allTasks.indexWhere((t) => t['id'] == task['id']);
-        if (index != -1) {
-          _allTasks[index]['status'] = 'completed';
-        }
+        final taskId = task['id'].toString();
+        await taskService.completeTask(taskId);
       }
-      _selectedTaskIds.clear();
-      _isMultiSelectMode = false;
-    });
+      
+      // Refresh data
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      ref.invalidate(recentActivitiesProvider);
+      ref.invalidate(userProfileFromDbProvider);
+      
+      setState(() {
+        _selectedTaskIds.clear();
+        _isMultiSelectMode = false;
+      });
 
-    final totalXP = selectedTasks.fold<int>(
-        0, (sum, task) => sum + (task['xpReward'] as int? ?? 0));
+      final totalXP = selectedTasks.fold<int>(
+          0, (sum, task) => sum + (task['xpReward'] as int? ?? 0));
 
-    Fluttertoast.showToast(
-      msg: "${selectedTasks.length} tasks completed! +$totalXP XP earned 🎉",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-    );
+      Fluttertoast.showToast(
+        msg: "${selectedTasks.length} tasks completed! +$totalXP XP earned 🎉",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
 
-    _confettiController.forward().then((_) {
-      _confettiController.reset();
-    });
+      _confettiController.forward().then((_) {
+        _confettiController.reset();
+      });
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error completing tasks: ${e.toString()}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    }
   }
 
-  void _handleDeleteSelected() {
-    setState(() {
-      _allTasks.removeWhere(
-          (task) => _selectedTaskIds.contains(task['id'].toString()));
-      _selectedTaskIds.clear();
-      _isMultiSelectMode = false;
-    });
+  Future<void> _handleDeleteSelected() async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      for (final taskId in _selectedTaskIds) {
+        await taskService.deleteTask(taskId);
+      }
+      
+      // Refresh data
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      
+      setState(() {
+        _selectedTaskIds.clear();
+        _isMultiSelectMode = false;
+      });
 
-    Fluttertoast.showToast(
-      msg: "Selected tasks deleted",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-    );
+      Fluttertoast.showToast(
+        msg: "Selected tasks deleted",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error deleting tasks: ${e.toString()}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    }
   }
 
   void _handleShareSelected() {

@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 
 class FriendService {
@@ -65,7 +64,7 @@ class FriendService {
           .from('friendships')
           .select('''
             *,
-            requester:requested_by (
+            requester:user_id (
               id,
               full_name,
               avatar_url
@@ -114,8 +113,7 @@ class FriendService {
       final existing = await _supabase
           .from('friendships')
           .select()
-          .or('user_id.eq.${_userId!},friend_id.eq.${_userId!}')
-          .or('user_id.eq.$friendId,friend_id.eq.$friendId')
+          .or('and(user_id.eq.${_userId!},friend_id.eq.$friendId),and(user_id.eq.$friendId,friend_id.eq.${_userId!})')
           .maybeSingle();
 
       if (existing != null) {
@@ -207,6 +205,53 @@ class FriendService {
           .delete()
           .eq('id', friendshipId)
           .or('user_id.eq.${_userId!},friend_id.eq.${_userId!}');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Search users by name or email
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    if (_userId == null) throw Exception('User not authenticated');
+    if (query.trim().isEmpty) return [];
+
+    try {
+      // Search in profiles table by full_name
+      // Note: We can't search by email directly from profiles, but we can search by name
+      final response = await _supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, level, total_xp')
+          .ilike('full_name', '%$query%')
+          .neq('id', _userId!) // Exclude current user
+          .limit(20);
+
+      // Get list of existing friendships to exclude
+      final friendships = await _supabase
+          .from('friendships')
+          .select('user_id, friend_id')
+          .or('user_id.eq.${_userId!},friend_id.eq.${_userId!}');
+
+      final friendIds = <String>{};
+      for (var friendship in friendships) {
+        if (friendship['user_id'] == _userId) {
+          friendIds.add(friendship['friend_id'] as String);
+        } else {
+          friendIds.add(friendship['user_id'] as String);
+        }
+      }
+
+      return List<Map<String, dynamic>>.from(response)
+          .where((profile) => !friendIds.contains(profile['id']))
+          .map((profile) {
+            return {
+              'id': profile['id'],
+              'name': profile['full_name'] ?? 'User',
+              'avatar': profile['avatar_url'] ?? '',
+              'level': profile['level'] ?? 1,
+              'xp': profile['total_xp'] ?? 0,
+            };
+          })
+          .toList();
     } catch (e) {
       rethrow;
     }
