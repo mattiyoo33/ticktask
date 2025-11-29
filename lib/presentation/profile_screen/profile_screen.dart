@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sizer/sizer.dart';
@@ -433,10 +432,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _performLogout() {
-    // In a real app, you would clear user session and navigate to login
-    _showSuccessMessage('Successfully signed out!');
-    // Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  Future<void> _performLogout() async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
+      
+      // Navigate directly to login screen and clear navigation stack
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.login,
+          (route) => false, // Remove all previous routes
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorMessage('Failed to sign out: ${e.toString()}');
+      }
+    }
   }
 
   void _showComingSoonDialog(String feature) {

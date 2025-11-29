@@ -6,11 +6,11 @@ import '../core/app_export.dart';
 
 extension ImageTypeExtension on String {
   ImageType get imageType {
-    if (this.startsWith('http') || this.startsWith('https')) {
+    if (startsWith('http') || startsWith('https')) {
       return ImageType.network;
-    } else if (this.endsWith('.svg')) {
+    } else if (endsWith('.svg')) {
       return ImageType.svg;
-    } else if (this.startsWith('file: //')) {
+    } else if (startsWith('file: //')) {
       return ImageType.file;
     } else {
       return ImageType.png;
@@ -22,7 +22,7 @@ enum ImageType { svg, png, network, file, unknown }
 
 // ignore_for_file: must_be_immutable
 class CustomImageWidget extends StatelessWidget {
-  CustomImageWidget({
+  const CustomImageWidget({super.key, 
     this.imageUrl,
     this.height,
     this.width,
@@ -33,7 +33,7 @@ class CustomImageWidget extends StatelessWidget {
     this.radius,
     this.margin,
     this.border,
-    this.placeHolder = 'assets/images/no-image.jpg',
+    this.placeHolder = '', // Empty by default, will use icon placeholder
     this.errorWidget,
     this.semanticLabel,
   });
@@ -116,7 +116,7 @@ class CustomImageWidget extends StatelessWidget {
     if (imageUrl != null) {
       switch (imageUrl!.imageType) {
         case ImageType.svg:
-          return Container(
+          return SizedBox(
             height: height,
             width: width,
             child: SvgPicture.asset(
@@ -124,9 +124,9 @@ class CustomImageWidget extends StatelessWidget {
               height: height,
               width: width,
               fit: fit ?? BoxFit.contain,
-              colorFilter: this.color != null
+              colorFilter: color != null
                   ? ColorFilter.mode(
-                      this.color ?? Colors.transparent, BlendMode.srcIn)
+                      color ?? Colors.transparent, BlendMode.srcIn)
                   : null,
               semanticsLabel: semanticLabel,
             ),
@@ -147,7 +147,7 @@ class CustomImageWidget extends StatelessWidget {
             fit: fit,
             imageUrl: imageUrl!,
             color: color,
-            placeholder: (context, url) => Container(
+            placeholder: (context, url) => SizedBox(
               height: 30,
               width: 30,
               child: LinearProgressIndicator(
@@ -157,13 +157,17 @@ class CustomImageWidget extends StatelessWidget {
             ),
             errorWidget: (context, url, error) =>
                 errorWidget ??
-                Image.asset(
-                  placeHolder,
-                  height: height,
-                  width: width,
-                  fit: fit ?? BoxFit.cover,
-                  semanticLabel: semanticLabel,
-                ),
+                (placeHolder.isNotEmpty
+                    ? Image.asset(
+                        placeHolder,
+                        height: height,
+                        width: width,
+                        fit: fit ?? BoxFit.cover,
+                        semanticLabel: semanticLabel,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildDefaultPlaceholder(),
+                      )
+                    : _buildDefaultPlaceholder()),
           );
         case ImageType.png:
         default:
@@ -178,5 +182,20 @@ class CustomImageWidget extends StatelessWidget {
       }
     }
     return SizedBox();
+  }
+
+  Widget _buildDefaultPlaceholder() {
+    return Container(
+      height: height,
+      width: width,
+      color: Colors.grey.shade200,
+      child: Icon(
+        Icons.person,
+        size: (height != null && width != null) 
+            ? (height! < width! ? height! * 0.5 : width! * 0.5)
+            : 24,
+        color: Colors.grey.shade400,
+      ),
+    );
   }
 }

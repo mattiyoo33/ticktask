@@ -8,6 +8,7 @@ import './widgets/advanced_options_widget.dart';
 import './widgets/difficulty_selection_widget.dart';
 import './widgets/quick_templates_widget.dart';
 import './widgets/recurring_task_widget.dart';
+import './widgets/ai_task_generator_widget.dart';
 
 class TaskCreationScreen extends ConsumerStatefulWidget {
   const TaskCreationScreen({super.key});
@@ -28,7 +29,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   DateTime? _selectedDueDate;
   bool _isRecurring = false;
   String _recurringFrequency = 'Daily';
-  List<String> _selectedDays = [];
+  final List<String> _selectedDays = [];
 
   // Advanced options
   bool _advancedOptionsExpanded = false;
@@ -133,6 +134,31 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
 
     // Provide haptic feedback
     HapticFeedback.lightImpact();
+  }
+
+  void _onAITaskGenerated(Map<String, dynamic> generatedTask) {
+    setState(() {
+      _titleController.text = generatedTask['title'] ?? '';
+      _descriptionController.text = generatedTask['description'] ?? '';
+      _selectedDifficulty = generatedTask['difficulty'] ?? 'Medium';
+      _selectedCategory = generatedTask['category'] ?? 'Personal';
+      _showTemplates = false;
+      
+      // Set due date if suggested
+      if (generatedTask['suggestedDueDate'] != null) {
+        try {
+          _selectedDueDate = DateTime.parse(generatedTask['suggestedDueDate']);
+        } catch (e) {
+          // Ignore date parsing errors
+        }
+      }
+    });
+
+    // Provide haptic feedback
+    HapticFeedback.mediumImpact();
+    
+    // Scroll to top to show the filled form
+    // Note: You might want to add a ScrollController for this
   }
 
   void _onDayToggled(String day) {
@@ -413,6 +439,16 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // AI Task Generator
+                AITaskGeneratorWidget(
+                  onTaskGenerated: _onAITaskGenerated,
+                ),
+                SizedBox(height: 4.h),
+                Divider(
+                  color: colorScheme.outline.withValues(alpha: 0.2),
+                ),
+                SizedBox(height: 4.h),
+                
                 // Quick Templates
                 if (_showTemplates) ...[
                   QuickTemplatesWidget(

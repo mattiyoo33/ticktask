@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../core/app_export.dart';
-import '../services/supabase_service.dart';
 import '../widgets/custo_error_widget.dart';
 
 void main() async {

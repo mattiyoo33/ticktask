@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
 import '../../widgets/custom_tab_bar.dart';
 import './widgets/add_friends_modal_widget.dart';
 import './widgets/empty_state_widget.dart';

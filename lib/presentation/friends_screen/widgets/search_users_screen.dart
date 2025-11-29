@@ -261,6 +261,7 @@ class _SearchUsersScreenState extends ConsumerState<SearchUsersScreen> {
         backgroundImage: user['avatar'] != null && user['avatar'].toString().isNotEmpty
             ? NetworkImage(user['avatar'] as String)
             : null,
+        backgroundColor: colorScheme.primaryContainer,
         child: user['avatar'] == null || user['avatar'].toString().isEmpty
             ? Text(
                 (user['name'] as String? ?? 'U')[0].toUpperCase(),
@@ -269,7 +270,6 @@ class _SearchUsersScreenState extends ConsumerState<SearchUsersScreen> {
                 ),
               )
             : null,
-        backgroundColor: colorScheme.primaryContainer,
       ),
       title: Text(
         user['name'] as String? ?? 'User',

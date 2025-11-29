@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 
 import '../core/app_export.dart';
 
@@ -27,10 +26,10 @@ class CustomErrorWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SvgPicture.asset(
-                'assets/images/sad_face.svg',
-                height: 42,
-                width: 42,
+              Icon(
+                Icons.sentiment_dissatisfied,
+                size: 42,
+                color: Colors.grey.shade600,
               ),
               const SizedBox(height: 8),
               Text(

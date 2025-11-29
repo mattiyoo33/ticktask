@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
 import './widgets/batch_actions_toolbar_widget.dart';
 import './widgets/empty_state_widget.dart';
 import './widgets/search_filter_bar_widget.dart';

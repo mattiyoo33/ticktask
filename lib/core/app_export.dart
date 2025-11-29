@@ -10,5 +10,6 @@ export '../services/supabase_service.dart';
 export '../services/task_service.dart';
 export '../services/friend_service.dart';
 export '../services/activity_service.dart';
+export '../services/ai_service.dart';
 export '../providers/auth_provider.dart';
 export '../providers/service_providers.dart';
