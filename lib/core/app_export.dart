@@ -1,6 +1,14 @@
 export 'package:connectivity_plus/connectivity_plus.dart';
 export 'package:google_fonts/google_fonts.dart';
+export 'package:flutter_riverpod/flutter_riverpod.dart';
 export '../routes/app_routes.dart';
 export '../widgets/custom_icon_widget.dart';
 export '../widgets/custom_image_widget.dart';
 export '../theme/app_theme.dart';
+export '../services/auth_service.dart';
+export '../services/supabase_service.dart';
+export '../services/task_service.dart';
+export '../services/friend_service.dart';
+export '../services/activity_service.dart';
+export '../providers/auth_provider.dart';
+export '../providers/service_providers.dart';

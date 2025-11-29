@@ -1,0 +1,348 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_service.dart';
+
+class TaskService {
+  final _supabase = SupabaseService.client;
+
+  // Get current user ID
+  String? get _userId => _supabase.auth.currentUser?.id;
+
+  // Get all tasks for current user
+  Future<List<Map<String, dynamic>>> getTasks({
+    String? status,
+    String? category,
+    DateTime? dueDate,
+    bool? isRecurring,
+  }) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      var query = _supabase
+          .from('tasks')
+          .select()
+          .eq('user_id', _userId!);
+
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+      if (category != null) {
+        query = query.eq('category', category);
+      }
+      if (dueDate != null) {
+        query = query.eq('due_date', dueDate.toIso8601String());
+      }
+      if (isRecurring != null) {
+        query = query.eq('is_recurring', isRecurring);
+      }
+
+      final response = await query.order('due_date', ascending: true).order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get today's tasks
+  Future<List<Map<String, dynamic>>> getTodaysTasks() async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final response = await _supabase
+          .from('tasks')
+          .select()
+          .eq('user_id', _userId!)
+          .inFilter('status', ['active', 'scheduled'])
+          .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})')
+          .order('due_time', ascending: true)
+          .order('due_date', ascending: true);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get task by ID
+  Future<Map<String, dynamic>?> getTaskById(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final response = await _supabase
+          .from('tasks')
+          .select()
+          .eq('id', taskId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Create a new task
+  Future<Map<String, dynamic>> createTask({
+    required String title,
+    String? description,
+    String? category,
+    String? difficulty,
+    DateTime? dueDate,
+    String? dueTime,
+    int? xpReward,
+    bool isRecurring = false,
+    String? recurrenceFrequency,
+    int? recurrenceInterval,
+    DateTime? nextOccurrence,
+    bool isCollaborative = false,
+  }) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final taskData = {
+        'user_id': _userId!,
+        'title': title,
+        'description': description,
+        'category': category,
+        'difficulty': difficulty ?? 'Medium',
+        'due_date': dueDate?.toIso8601String(),
+        'due_time': dueTime,
+        'xp_reward': xpReward ?? _calculateXpReward(difficulty ?? 'Medium'),
+        'is_recurring': isRecurring,
+        'recurrence_frequency': recurrenceFrequency,
+        'recurrence_interval': recurrenceInterval ?? 1,
+        'next_occurrence': nextOccurrence?.toIso8601String(),
+        'is_collaborative': isCollaborative,
+        'status': 'active',
+      };
+
+      final response = await _supabase
+          .from('tasks')
+          .insert(taskData)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Update a task
+  Future<Map<String, dynamic>> updateTask(
+    String taskId, {
+    String? title,
+    String? description,
+    String? category,
+    String? difficulty,
+    DateTime? dueDate,
+    String? dueTime,
+    int? xpReward,
+    String? status,
+    bool? isRecurring,
+    String? recurrenceFrequency,
+    DateTime? nextOccurrence,
+  }) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      if (title != null) updates['title'] = title;
+      if (description != null) updates['description'] = description;
+      if (category != null) updates['category'] = category;
+      if (difficulty != null) updates['difficulty'] = difficulty;
+      if (dueDate != null) updates['due_date'] = dueDate.toIso8601String();
+      if (dueTime != null) updates['due_time'] = dueTime;
+      if (xpReward != null) updates['xp_reward'] = xpReward;
+      if (status != null) updates['status'] = status;
+      if (isRecurring != null) updates['is_recurring'] = isRecurring;
+      if (recurrenceFrequency != null) {
+        updates['recurrence_frequency'] = recurrenceFrequency;
+      }
+      if (nextOccurrence != null) {
+        updates['next_occurrence'] = nextOccurrence.toIso8601String();
+      }
+
+      final response = await _supabase
+          .from('tasks')
+          .update(updates)
+          .eq('id', taskId)
+          .eq('user_id', _userId!)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete a task
+  Future<void> deleteTask(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      await _supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId)
+          .eq('user_id', _userId!);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Complete a task
+  Future<Map<String, dynamic>> completeTask(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // Get task to get XP reward
+      final task = await getTaskById(taskId);
+      if (task == null) throw Exception('Task not found');
+
+      final xpReward = task['xp_reward'] as int? ?? 0;
+
+      // Create completion record
+      final completion = await _supabase
+          .from('task_completions')
+          .insert({
+            'task_id': taskId,
+            'user_id': _userId!,
+            'xp_gained': xpReward,
+          })
+          .select()
+          .single();
+
+      // Update task status
+      await updateTask(taskId, status: 'completed');
+
+      // Create activity
+      await _supabase.from('activities').insert({
+        'user_id': _userId!,
+        'type': 'task_completed',
+        'task_id': taskId,
+        'message': "completed '${task['title']}'",
+        'xp_gained': xpReward,
+      });
+
+      return completion;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get task streak data
+  Future<Map<String, dynamic>?> getTaskStreak(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final response = await _supabase
+          .from('task_streaks')
+          .select()
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get task participants (for collaborative tasks)
+  Future<List<Map<String, dynamic>>> getTaskParticipants(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final response = await _supabase
+          .from('task_participants')
+          .select('''
+            *,
+            profiles:user_id (
+              id,
+              full_name,
+              avatar_url
+            )
+          ''')
+          .eq('task_id', taskId);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get task comments
+  Future<List<Map<String, dynamic>>> getTaskComments(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final response = await _supabase
+          .from('task_comments')
+          .select('''
+            *,
+            profiles:user_id (
+              id,
+              full_name,
+              avatar_url
+            )
+          ''')
+          .eq('task_id', taskId)
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Add comment to task
+  Future<Map<String, dynamic>> addComment(String taskId, String content) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final response = await _supabase
+          .from('task_comments')
+          .insert({
+            'task_id': taskId,
+            'user_id': _userId!,
+            'content': content,
+          })
+          .select('''
+            *,
+            profiles:user_id (
+              id,
+              full_name,
+              avatar_url
+            )
+          ''')
+          .single();
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Helper: Calculate XP reward based on difficulty
+  int _calculateXpReward(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 10;
+      case 'medium':
+        return 20;
+      case 'hard':
+        return 30;
+      default:
+        return 20;
+    }
+  }
+}
+

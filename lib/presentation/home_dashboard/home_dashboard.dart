@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -11,165 +12,108 @@ import './widgets/recent_activity_widget.dart';
 import './widgets/tasker_mascot_widget.dart';
 import './widgets/todays_tasks_widget.dart';
 
-class HomeDashboard extends StatefulWidget {
+class HomeDashboard extends ConsumerStatefulWidget {
   const HomeDashboard({super.key});
 
   @override
-  State<HomeDashboard> createState() => _HomeDashboardState();
+  ConsumerState<HomeDashboard> createState() => _HomeDashboardState();
 }
 
-class _HomeDashboardState extends State<HomeDashboard>
+class _HomeDashboardState extends ConsumerState<HomeDashboard>
     with TickerProviderStateMixin {
   late AnimationController _confettiController;
 
-  // Mock user data
-  final Map<String, dynamic> _userData = {
-    "id": 1,
-    "name": "Sarah Johnson",
-    "avatar":
-        "https://img.rocket.new/generatedImages/rocket_gen_img_1274dd504-1762275023732.png",
-    "semanticLabel":
-        "Professional headshot of a young woman with brown hair wearing a white blazer",
-    "level": 12,
-    "currentXP": 850,
-    "nextLevelXP": 1200,
-  };
+  Map<String, dynamic> get _userData {
+    final userProfileAsync = ref.watch(userProfileFromDbProvider);
+    final userProfile = userProfileAsync.value;
+    final currentUser = ref.watch(currentUserProvider);
+    
+    if (userProfile == null && currentUser == null) {
+      // Fallback if no user data
+      return {
+        "id": null,
+        "name": "User",
+        "avatar": "",
+        "level": 1,
+        "currentXP": 0,
+        "nextLevelXP": 100,
+      };
+    }
 
-  // Mock today's tasks data
-  final List<Map<String, dynamic>> _todaysTasks = [
-    {
-      "id": 1,
-      "title": "Morning Workout",
-      "description": "30-minute cardio session at the gym",
-      "difficulty": "medium",
-      "dueTime": "8:00 AM",
-      "isCompleted": false,
-      "xpReward": 20,
-    },
-    {
-      "id": 2,
-      "title": "Read 20 Pages",
-      "description": "Continue reading 'Atomic Habits' book",
-      "difficulty": "easy",
-      "dueTime": "7:00 PM",
-      "isCompleted": false,
-      "xpReward": 10,
-    },
-    {
-      "id": 3,
-      "title": "Complete Project Report",
-      "description": "Finish quarterly analysis report for client presentation",
-      "difficulty": "hard",
-      "dueTime": "5:00 PM",
-      "isCompleted": true,
-      "xpReward": 30,
-    },
-    {
-      "id": 4,
-      "title": "Meditate",
-      "description": "10-minute mindfulness meditation",
-      "difficulty": "easy",
-      "dueTime": "9:00 PM",
-      "isCompleted": false,
-      "xpReward": 10,
-    },
-  ];
+    // Extract name from user profile (from database) or auth metadata
+    final fullName = userProfile?['full_name'] as String?;
+    final email = userProfile?['email'] as String? ?? currentUser?.email;
+    final name = fullName ?? email?.split('@')[0] ?? 'User';
+    
+    return {
+      "id": userProfile?['id'] ?? currentUser?.id,
+      "name": name,
+      "avatar": userProfile?['avatar_url'] ?? "",
+      "level": userProfile?['level'] as int? ?? 1,
+      "currentXP": userProfile?['current_xp'] as int? ?? 0,
+      "nextLevelXP": _calculateNextLevelXP(userProfile?['level'] as int? ?? 1),
+    };
+  }
 
-  // Mock current streaks data
-  final List<Map<String, dynamic>> _currentStreaks = [
-    {
-      "id": 1,
-      "title": "Daily Exercise",
-      "dayCount": 12,
-      "category": "fitness",
-      "lastCompleted": DateTime.now().subtract(const Duration(hours: 2)),
-    },
-    {
-      "id": 2,
-      "title": "Reading",
-      "dayCount": 8,
-      "category": "learning",
-      "lastCompleted": DateTime.now().subtract(const Duration(hours: 18)),
-    },
-    {
-      "id": 3,
-      "title": "Meditation",
-      "dayCount": 5,
-      "category": "wellness",
-      "lastCompleted": DateTime.now().subtract(const Duration(hours: 12)),
-    },
-    {
-      "id": 4,
-      "title": "Water Intake",
-      "dayCount": 15,
-      "category": "health",
-      "lastCompleted": DateTime.now().subtract(const Duration(hours: 1)),
-    },
-  ];
+  int _calculateNextLevelXP(int level) {
+    // Simple XP calculation: 100 * level^1.5
+    return (100 * (level * level * 1.5)).round();
+  }
 
-  // Mock recent activity data
-  final List<Map<String, dynamic>> _recentActivity = [
-    {
-      "id": 1,
-      "type": "task_completed",
-      "userName": "You",
-      "userAvatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1274dd504-1762275023732.png",
-      "semanticLabel":
-          "Professional headshot of a young woman with brown hair wearing a white blazer",
-      "message": "completed 'Complete Project Report'",
-      "timestamp": DateTime.now().subtract(const Duration(hours: 1)),
-      "xpGained": 30,
-    },
-    {
-      "id": 2,
-      "type": "streak_achieved",
-      "userName": "Mike Chen",
-      "userAvatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1f3d1cbe1-1762274610155.png",
-      "semanticLabel":
-          "Portrait of an Asian man with short black hair wearing a casual blue shirt",
-      "message": "achieved a 7-day streak in Daily Workout!",
-      "timestamp": DateTime.now().subtract(const Duration(hours: 3)),
-      "xpGained": 25,
-    },
-    {
-      "id": 3,
-      "type": "level_up",
-      "userName": "Emma Wilson",
-      "userAvatar":
-          "https://images.unsplash.com/photo-1545946463-c7abd8b3ff5d",
-      "semanticLabel":
-          "Smiling blonde woman in a red sweater outdoors with autumn leaves in background",
-      "message": "leveled up to Level 15!",
-      "timestamp": DateTime.now().subtract(const Duration(hours: 5)),
-      "xpGained": null,
-    },
-    {
-      "id": 4,
-      "type": "friend_added",
-      "userName": "You",
-      "userAvatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_1274dd504-1762275023732.png",
-      "semanticLabel":
-          "Professional headshot of a young woman with brown hair wearing a white blazer",
-      "message": "added Alex Rodriguez as a friend",
-      "timestamp": DateTime.now().subtract(const Duration(hours: 8)),
-      "xpGained": null,
-    },
-    {
-      "id": 5,
-      "type": "badge_earned",
-      "userName": "David Kim",
-      "userAvatar":
-          "https://img.rocket.new/generatedImages/rocket_gen_img_14d5cbd5d-1762275037552.png",
-      "semanticLabel":
-          "Professional headshot of a man with dark hair wearing a navy suit and tie",
-      "message": "earned the 'Consistency Champion' badge",
-      "timestamp": DateTime.now().subtract(const Duration(hours: 12)),
-      "xpGained": null,
-    },
-  ];
+  // Get today's tasks from database
+  List<Map<String, dynamic>> get _todaysTasks {
+    final tasksAsync = ref.watch(todaysTasksProvider);
+    return tasksAsync.when(
+      data: (tasks) => tasks.map((task) => {
+        'id': task['id'],
+        'title': task['title'] ?? '',
+        'description': task['description'] ?? '',
+        'difficulty': (task['difficulty'] as String?)?.toLowerCase() ?? 'medium',
+        'dueTime': task['due_time'] ?? '',
+        'isCompleted': task['status'] == 'completed',
+        'xpReward': task['xp_reward'] ?? 10,
+      }).toList(),
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
+
+  // Get current streaks from database (tasks with recurring streaks)
+  List<Map<String, dynamic>> get _currentStreaks {
+    final tasksAsync = ref.watch(allTasksProvider);
+    return tasksAsync.when(
+      data: (tasks) {
+        // Filter recurring tasks and get their streak data
+        final recurringTasks = tasks.where((task) => 
+          task['is_recurring'] == true && task['status'] == 'active'
+        ).toList();
+        
+        // For now, return empty - streaks will be populated when tasks are completed
+        // TODO: Fetch actual streak data from task_streaks table
+        return [];
+      },
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
+
+  // Get recent activities from database
+  List<Map<String, dynamic>> get _recentActivity {
+    final activitiesAsync = ref.watch(recentActivitiesProvider);
+    return activitiesAsync.when(
+      data: (activities) => activities.map((activity) => {
+        'id': activity['id'],
+        'type': activity['type'],
+        'userName': activity['userName'] ?? 'User',
+        'userAvatar': activity['userAvatar'] ?? '',
+        'message': activity['message'] ?? '',
+        'timestamp': activity['timestamp'] ?? DateTime.now(),
+        'xpGained': activity['xpGained'],
+      }).toList(),
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
 
   @override
   void initState() {
@@ -286,11 +230,11 @@ class _HomeDashboardState extends State<HomeDashboard>
                   children: [
                     SizedBox(height: 2.h),
                     GreetingHeaderWidget(
-                      userName: _userData['name'] as String,
-                      userAvatar: _userData['avatar'] as String,
-                      currentLevel: _userData['level'] as int,
-                      currentXP: _userData['currentXP'] as int,
-                      nextLevelXP: _userData['nextLevelXP'] as int,
+                      userName: _userData['name'] as String? ?? 'User',
+                      userAvatar: _userData['avatar'] as String? ?? '',
+                      currentLevel: _userData['level'] as int? ?? 1,
+                      currentXP: _userData['currentXP'] as int? ?? 0,
+                      nextLevelXP: _userData['nextLevelXP'] as int? ?? 100,
                     ),
                     SizedBox(height: 2.h),
                     TaskerMascotWidget(

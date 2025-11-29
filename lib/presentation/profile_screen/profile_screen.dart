@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sizer/sizer.dart';
@@ -12,31 +13,81 @@ import './widgets/activity_history_widget.dart';
 import './widgets/profile_header_widget.dart';
 import './widgets/statistics_overview_widget.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
-  // Mock user data
-  final Map<String, dynamic> userData = {
-    "id": 1,
-    "username": "TaskMaster2024",
-    "email": "taskmaster@ticktask.com",
-    "avatar":
-        "https://img.rocket.new/generatedImages/rocket_gen_img_1274dd504-1762275023732.png",
-    "avatarDescription":
-        "Professional headshot of a young woman with shoulder-length brown hair wearing a white blazer against a neutral background",
-    "level": 12,
-    "currentXP": 850,
-    "nextLevelXP": 1300,
-    "totalXP": 8450,
-    "joinDate": "2024-01-15",
-  };
+  Map<String, dynamic> get userData {
+    final userProfileAsync = ref.watch(userProfileFromDbProvider);
+    final userProfile = userProfileAsync.value;
+    final currentUser = ref.watch(currentUserProvider);
+    
+    if (userProfile == null && currentUser == null) {
+      // Fallback if no user data
+      return {
+        "id": null,
+        "username": "User",
+        "email": "",
+        "avatar": "",
+        "level": 1,
+        "currentXP": 0,
+        "nextLevelXP": 100,
+        "totalXP": 0,
+        "joinDate": DateTime.now().toIso8601String(),
+      };
+    }
+
+    final fullName = userProfile?['full_name'] as String?;
+    final email = userProfile?['email'] as String? ?? currentUser?.email ?? "";
+    final username = fullName ?? (email.isNotEmpty ? email.split('@')[0] : "User");
+    
+    // Handle createdAt - get from user profile or current user
+    DateTime createdAt = DateTime.now();
+    
+    // First try to get from database profile
+    if (userProfile?['created_at'] != null) {
+      final created = userProfile!['created_at'];
+      if (created is DateTime) {
+        createdAt = created;
+      } else if (created is String) {
+        try {
+          createdAt = DateTime.parse(created);
+        } catch (e) {
+          // Keep default, will try currentUser below
+        }
+      }
+    }
+    
+    // If still default, use currentUser.createdAt (which is DateTime?)
+    // We'll use the database value primarily, currentUser.createdAt as fallback
+    // Note: The database profile should have created_at, so this is just a safety fallback
+    
+    final level = userProfile?['level'] as int? ?? 1;
+    
+    return {
+      "id": userProfile?['id'] ?? currentUser?.id,
+      "username": username,
+      "email": email,
+      "avatar": userProfile?['avatar_url'] ?? "",
+      "avatarDescription": "User profile picture",
+      "level": level,
+      "currentXP": userProfile?['current_xp'] as int? ?? 0,
+      "nextLevelXP": _calculateNextLevelXP(level),
+      "totalXP": userProfile?['total_xp'] as int? ?? 0,
+      "joinDate": createdAt.toIso8601String().split('T')[0],
+    };
+  }
+
+  int _calculateNextLevelXP(int level) {
+    // Simple XP calculation: 100 * level^1.5
+    return (100 * (level * level * 1.5)).round();
+  }
 
   // Mock statistics data
   final Map<String, dynamic> statisticsData = {
@@ -355,27 +406,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       if (image != null) {
-        // In a real app, you would upload the image to your server
+        // TODO: Upload image to Supabase Storage and get URL
         // For now, we'll just show a success message
         _showSuccessMessage('Profile photo updated successfully!');
-
-        // Update the avatar URL in userData (in real app, this would be the uploaded image URL)
-        setState(() {
-          userData["avatar"] =
-              image.path; // In real app, this would be the server URL
-        });
+        
+        // Note: In production, you would:
+        // 1. Upload image to Supabase Storage
+        // 2. Get the public URL
+        // 3. Update user profile with: authService.updateProfile(avatarUrl: url)
+        // 4. The UI will automatically update via Riverpod
       }
     } catch (e) {
       _showErrorMessage('Failed to update profile photo. Please try again.');
     }
   }
 
-  void _removeAvatar() {
-    setState(() {
-      userData["avatar"] =
-          "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400";
-    });
-    _showSuccessMessage('Profile photo removed successfully!');
+  Future<void> _removeAvatar() async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.updateProfile(avatarUrl: '');
+      _showSuccessMessage('Profile photo removed successfully!');
+    } catch (e) {
+      _showErrorMessage('Failed to remove profile photo. Please try again.');
+    }
   }
 
   void _handleEditProfile() {
