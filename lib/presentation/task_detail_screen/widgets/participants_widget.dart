@@ -149,7 +149,7 @@ class ParticipantsWidget extends StatelessWidget {
                             if (contribution > 0) ...[
                               SizedBox(width: 2.w),
                               Text(
-                                '${contribution}% contribution',
+                                '$contribution% contribution',
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
