@@ -52,7 +52,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final colorScheme = theme.colorScheme;
 
     // Provide haptic feedback for interactions
-    void _handleBackPress() {
+    void handleBackPress() {
       HapticFeedback.lightImpact();
       if (onBackPressed != null) {
         onBackPressed!();
@@ -61,7 +61,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       }
     }
 
-    Widget? _buildLeading() {
+    Widget? buildLeading() {
       if (leading != null) return leading;
 
       if (showBackButton ||
@@ -71,7 +71,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             Icons.arrow_back_ios_new,
             size: 20,
           ),
-          onPressed: _handleBackPress,
+          onPressed: handleBackPress,
           tooltip: 'Back',
         );
       }
@@ -79,7 +79,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       return null;
     }
 
-    List<Widget>? _buildActions() {
+    List<Widget>? buildActions() {
       if (actions == null) return null;
 
       return actions!.map((action) {
@@ -93,7 +93,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       }).toList();
     }
 
-    Widget? _buildTitle() {
+    Widget? buildTitle() {
       if (title == null) return null;
 
       switch (variant) {
@@ -127,7 +127,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       }
     }
 
-    bool _shouldCenterTitle() {
+    bool shouldCenterTitle() {
       switch (variant) {
         case CustomAppBarVariant.centered:
           return true;
@@ -138,7 +138,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       }
     }
 
-    double _getElevation() {
+    double getElevation() {
       switch (variant) {
         case CustomAppBarVariant.minimal:
           return 0;
@@ -150,15 +150,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
 
     return AppBar(
-      title: _buildTitle(),
-      leading: _buildLeading(),
-      actions: _buildActions(),
+      title: buildTitle(),
+      leading: buildLeading(),
+      actions: buildActions(),
       automaticallyImplyLeading: false,
       backgroundColor: backgroundColor ?? theme.appBarTheme.backgroundColor,
       foregroundColor: foregroundColor ?? theme.appBarTheme.foregroundColor,
-      elevation: _getElevation(),
+      elevation: getElevation(),
       scrolledUnderElevation: variant == CustomAppBarVariant.minimal ? 0 : 2,
-      centerTitle: _shouldCenterTitle(),
+      centerTitle: shouldCenterTitle(),
       flexibleSpace: flexibleSpace,
       bottom: bottom,
       iconTheme: iconTheme ?? theme.appBarTheme.iconTheme,
