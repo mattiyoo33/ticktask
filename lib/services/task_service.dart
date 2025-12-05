@@ -65,17 +65,37 @@ class TaskService {
     }
   }
 
-  // Get task by ID
+  // Get task by ID (allows access for task owner or participants)
   Future<Map<String, dynamic>?> getTaskById(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      final response = await _supabase
+      // First try to get as owner
+      var response = await _supabase
           .from('tasks')
           .select()
           .eq('id', taskId)
           .eq('user_id', _userId!)
           .maybeSingle();
+
+      // If not found as owner, check if user is a participant
+      if (response == null) {
+        final participantCheck = await _supabase
+            .from('task_participants')
+            .select('task_id')
+            .eq('task_id', taskId)
+            .eq('user_id', _userId!)
+            .maybeSingle();
+
+        if (participantCheck != null) {
+          // User is a participant, fetch the task
+          response = await _supabase
+              .from('tasks')
+              .select()
+              .eq('id', taskId)
+              .maybeSingle();
+        }
+      }
 
       return response;
     } catch (e) {
@@ -144,6 +164,7 @@ class TaskService {
     bool? isRecurring,
     String? recurrenceFrequency,
     DateTime? nextOccurrence,
+    bool? isCollaborative,
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -167,6 +188,7 @@ class TaskService {
       if (nextOccurrence != null) {
         updates['next_occurrence'] = nextOccurrence.toIso8601String();
       }
+      if (isCollaborative != null) updates['is_collaborative'] = isCollaborative;
 
       final response = await _supabase
           .from('tasks')
@@ -325,6 +347,56 @@ class TaskService {
           .single();
 
       return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Add friend as participant to task
+  Future<void> addFriendToTask(String taskId, String friendId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // First, ensure task is collaborative
+      final task = await getTaskById(taskId);
+      if (task == null) throw Exception('Task not found');
+
+      if (task['is_collaborative'] != true) {
+        // Make task collaborative
+        await updateTask(taskId, isCollaborative: true);
+      }
+
+      // Check if participant already exists
+      final existing = await _supabase
+          .from('task_participants')
+          .select()
+          .eq('task_id', taskId)
+          .eq('user_id', friendId)
+          .maybeSingle();
+
+      if (existing == null) {
+        // Add friend as participant
+        await _supabase.from('task_participants').insert({
+          'task_id': taskId,
+          'user_id': friendId,
+          'role': 'participant',
+        });
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Remove friend from task
+  Future<void> removeFriendFromTask(String taskId, String friendId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      await _supabase
+          .from('task_participants')
+          .delete()
+          .eq('task_id', taskId)
+          .eq('user_id', friendId);
     } catch (e) {
       rethrow;
     }

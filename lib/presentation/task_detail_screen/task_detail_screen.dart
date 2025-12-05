@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
+import '../../services/supabase_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import './widgets/action_button_widget.dart';
 import './widgets/celebration_overlay_widget.dart';
 import './widgets/comments_section_widget.dart';
 import './widgets/participants_widget.dart';
+import './widgets/select_friends_modal_widget.dart';
 import './widgets/streak_progress_widget.dart';
 import './widgets/task_header_widget.dart';
 import './widgets/task_info_widget.dart';
@@ -29,6 +32,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   List<Map<String, dynamic>> _participants = [];
   List<Map<String, dynamic>> _comments = [];
   String? _taskId;
+  RealtimeChannel? _commentsChannel;
 
   @override
   void didChangeDependencies() {
@@ -38,6 +42,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _loadTaskData();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _commentsChannel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> _loadTaskData() async {
@@ -107,6 +117,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _comments = _transformComments(comments);
         _isInitialLoading = false;
       });
+
+      // Set up real-time comments subscription
+      _setupRealtimeComments();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -484,18 +497,86 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     }
   }
 
+  void _setupRealtimeComments() {
+    if (_taskId == null) return;
+
+    // Unsubscribe from previous channel if exists
+    _commentsChannel?.unsubscribe();
+
+    // Subscribe to real-time comments
+    _commentsChannel = SupabaseService.client
+        .channel('task_comments_$_taskId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'task_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: _taskId,
+          ),
+          callback: (payload) {
+            // Reload comments when a new one is added
+            _loadComments();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'task_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: _taskId,
+          ),
+          callback: (payload) {
+            _loadComments();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'task_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: _taskId,
+          ),
+          callback: (payload) {
+            _loadComments();
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _loadComments() async {
+    if (_taskId == null) return;
+
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      final comments = await taskService.getTaskComments(_taskId!);
+      
+      if (mounted) {
+        setState(() {
+          _comments = _transformComments(comments);
+        });
+      }
+    } catch (e) {
+      // Silently fail for real-time updates
+      debugPrint('Error loading comments: $e');
+    }
+  }
+
   void _handleAddComment(String comment) async {
     if (_taskId == null) return;
 
     try {
       final taskService = ref.read(taskServiceProvider);
-      final newComment = await taskService.addComment(_taskId!, comment);
+      await taskService.addComment(_taskId!, comment);
       
-      // Transform and add to comments list
-      final transformedComment = _transformComments([newComment]).first;
-      setState(() {
-        _comments.insert(0, transformedComment);
-      });
+      // Real-time subscription will update the UI automatically
+      // But we can also manually refresh for immediate feedback
+      await _loadComments();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -515,6 +596,29 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         );
       }
     }
+  }
+
+  void _handleSelectFriends() {
+    if (_taskId == null) return;
+
+    final currentParticipantIds = _participants
+        .map((p) => p['id'] as String?)
+        .where((id) => id != null)
+        .cast<String>()
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectFriendsModalWidget(
+        taskId: _taskId!,
+        currentParticipantIds: currentParticipantIds,
+      ),
+    ).then((_) {
+      // Reload task data after friend selection
+      _loadTaskData();
+    });
   }
 
   void _onCelebrationComplete() {
@@ -605,10 +709,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     hasStreakBonus: hasStreakBonus,
                   ),
 
-                // Participants (for collaborative tasks)
+                // Participants (always show, with option to add friends)
                 ParticipantsWidget(
                   participants: _participants,
                   isCollaborative: _taskData!['is_collaborative'] == true,
+                  onSelectFriends: _handleSelectFriends,
                 ),
 
                 // Comments Section
@@ -616,6 +721,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   comments: _comments,
                   onAddComment: _handleAddComment,
                   isCollaborative: _taskData!['is_collaborative'] == true,
+                  hasParticipants: _participants.isNotEmpty,
                 ),
 
                 SizedBox(height: 2.h),
