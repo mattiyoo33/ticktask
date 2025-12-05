@@ -220,15 +220,46 @@ class TaskService {
   }
 
   // Complete a task
+  // Returns completion record with 'xp_awarded' boolean indicating if XP was granted
   Future<Map<String, dynamic>> completeTask(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      // Get task to get XP reward
+      // Get task to get XP reward and deadline info
       final task = await getTaskById(taskId);
       if (task == null) throw Exception('Task not found');
 
       final xpReward = task['xp_reward'] as int? ?? 0;
+      final dueDateStr = task['due_date'] as String?;
+      final dueTimeStr = task['due_time'] as String?;
+      
+      // Check if task was completed on time
+      final now = DateTime.now();
+      bool xpAwarded = false;
+      int actualXpGained = 0;
+
+      if (dueDateStr != null) {
+        // Task has a deadline - check if completed on time
+        final deadline = _calculateDeadline(dueDateStr, dueTimeStr);
+        
+        if (deadline != null && (now.isBefore(deadline) || now.isAtSameMomentAs(deadline))) {
+          // Completed on or before deadline - award XP
+          xpAwarded = true;
+          actualXpGained = xpReward;
+        } else if (deadline != null) {
+          // Completed after deadline - no XP
+          xpAwarded = false;
+          actualXpGained = 0;
+        } else {
+          // Deadline parsing failed - award XP as fallback
+          xpAwarded = true;
+          actualXpGained = xpReward;
+        }
+      } else {
+        // No deadline set - award XP (tasks without deadlines can be completed anytime)
+        xpAwarded = true;
+        actualXpGained = xpReward;
+      }
 
       // Create completion record
       final completion = await _supabase
@@ -236,7 +267,7 @@ class TaskService {
           .insert({
             'task_id': taskId,
             'user_id': _userId!,
-            'xp_gained': xpReward,
+            'xp_gained': actualXpGained,
           })
           .select()
           .single();
@@ -249,13 +280,67 @@ class TaskService {
         'user_id': _userId!,
         'type': 'task_completed',
         'task_id': taskId,
-        'message': "completed '${task['title']}'",
-        'xp_gained': xpReward,
+        'message': xpAwarded 
+            ? "completed '${task['title']}'"
+            : "completed '${task['title']}' (late - no XP)",
+        'xp_gained': actualXpGained,
       });
 
-      return completion;
+      // Add xp_awarded flag to return value
+      final result = Map<String, dynamic>.from(completion);
+      result['xp_awarded'] = xpAwarded;
+      result['xp_should_have_been'] = xpReward;
+      
+      return result;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Helper: Calculate deadline DateTime from due_date and due_time
+  // Returns the exact deadline moment (date + time) for comparison
+  DateTime? _calculateDeadline(String? dueDateStr, String? dueTimeStr) {
+    if (dueDateStr == null) return null;
+
+    try {
+      // Parse the due_date (includes timezone info from database)
+      final dueDate = DateTime.parse(dueDateStr);
+      
+      // Convert to local time for comparison with DateTime.now()
+      final localDueDate = dueDate.toLocal();
+      
+      if (dueTimeStr != null && dueTimeStr.isNotEmpty && dueTimeStr.trim().isNotEmpty) {
+        // Parse time string (format: "HH:mm" or "HH:mm:ss")
+        final timeParts = dueTimeStr.trim().split(':');
+        if (timeParts.length >= 2) {
+          final hour = int.tryParse(timeParts[0]);
+          final minute = int.tryParse(timeParts[1]);
+          
+          if (hour != null && minute != null && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            // Combine date and time in local timezone
+            return DateTime(
+              localDueDate.year,
+              localDueDate.month,
+              localDueDate.day,
+              hour,
+              minute,
+            );
+          }
+        }
+      }
+      
+      // If no time specified, deadline is end of day (23:59:59)
+      return DateTime(
+        localDueDate.year,
+        localDueDate.month,
+        localDueDate.day,
+        23,
+        59,
+        59,
+      );
+    } catch (e) {
+      // If parsing fails, return null (will fallback to awarding XP)
+      return null;
     }
   }
 

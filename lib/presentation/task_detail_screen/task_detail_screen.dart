@@ -379,10 +379,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
     try {
       final taskService = ref.read(taskServiceProvider);
-      await taskService.completeTask(_taskId!);
+      final completionResult = await taskService.completeTask(_taskId!);
       
-      final xpReward = _taskData!['xp_reward'] as int? ?? 0;
-      final streakBonus = _streakData?['has_streak_bonus'] == true ? 25 : 0;
+      final xpAwarded = completionResult['xp_awarded'] as bool? ?? false;
+      final xpGained = completionResult['xp_gained'] as int? ?? 0;
+      final streakBonus = _streakData?['has_streak_bonus'] == true && xpAwarded ? 25 : 0;
       
       // Refresh task data
       await _loadTaskData();
@@ -393,9 +394,27 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       setState(() {
         _isLoading = false;
-        _xpGained = xpReward + streakBonus;
-        _showCelebration = true;
+        _xpGained = xpGained + streakBonus;
+        _showCelebration = xpAwarded; // Only show celebration if XP was awarded
       });
+
+      if (mounted) {
+        if (xpAwarded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Task completed! +${xpGained + streakBonus} XP earned 🎉'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task completed, but no XP awarded (completed after deadline)'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;

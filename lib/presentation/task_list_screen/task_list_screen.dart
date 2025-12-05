@@ -360,9 +360,23 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
 
     try {
       final taskService = ref.read(taskServiceProvider);
+      int totalXpAwarded = 0;
+      int tasksCompletedOnTime = 0;
+      int tasksCompletedLate = 0;
+
       for (final task in selectedTasks) {
         final taskId = task['id'].toString();
-        await taskService.completeTask(taskId);
+        final completionResult = await taskService.completeTask(taskId);
+        
+        final xpAwarded = completionResult['xp_awarded'] as bool? ?? false;
+        final xpGained = completionResult['xp_gained'] as int? ?? 0;
+        
+        totalXpAwarded += xpGained;
+        if (xpAwarded) {
+          tasksCompletedOnTime++;
+        } else {
+          tasksCompletedLate++;
+        }
       }
       
       // Refresh data
@@ -376,18 +390,23 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         _isMultiSelectMode = false;
       });
 
-      final totalXP = selectedTasks.fold<int>(
-          0, (sum, task) => sum + (task['xpReward'] as int? ?? 0));
+      String message;
+      if (tasksCompletedLate > 0 && tasksCompletedOnTime > 0) {
+        message = "$tasksCompletedOnTime tasks completed on time (+$totalXpAwarded XP), $tasksCompletedLate completed late (no XP)";
+      } else if (tasksCompletedLate > 0) {
+        message = "${selectedTasks.length} tasks completed late - no XP awarded";
+      } else {
+        message = "${selectedTasks.length} tasks completed! +$totalXpAwarded XP earned 🎉";
+        _confettiController.forward().then((_) {
+          _confettiController.reset();
+        });
+      }
 
       Fluttertoast.showToast(
-        msg: "${selectedTasks.length} tasks completed! +$totalXP XP earned 🎉",
+        msg: message,
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
-
-      _confettiController.forward().then((_) {
-        _confettiController.reset();
-      });
     } catch (e) {
       Fluttertoast.showToast(
         msg: "Error completing tasks: ${e.toString()}",
