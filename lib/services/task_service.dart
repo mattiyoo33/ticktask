@@ -1,3 +1,11 @@
+/// Task Service
+/// 
+/// This service handles all task-related operations including creating, reading, updating, and deleting
+/// tasks. It manages task completion logic with deadline-based XP rewards (XP is only awarded if tasks
+/// are completed on or before their due date/time). The service also handles collaborative task features
+/// such as adding friends as participants, managing task participants, and handling task comments with
+/// real-time updates. It provides methods for fetching task streaks, calculating XP rewards based on
+/// difficulty levels, and managing task statuses (active, completed, overdue, etc.).
 import 'supabase_service.dart';
 
 class TaskService {

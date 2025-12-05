@@ -1,3 +1,12 @@
+/// Task Detail Screen
+/// 
+/// This screen displays comprehensive details for a single task, including its title, description,
+/// due date, difficulty, XP reward, and completion status. It provides functionality for task
+/// management such as marking tasks as complete/incomplete, editing task details, and deleting tasks.
+/// The screen also supports collaborative features including friend selection for task assignment,
+/// real-time comments from assigned participants, and participant management. It integrates with
+/// Supabase Realtime to provide live comment updates and displays celebration animations when
+/// tasks are completed on time with XP rewards.
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -98,16 +107,23 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       // Fetch streak data
       final streak = await taskService.getTaskStreak(_taskId!);
 
-      // Fetch participants (only if collaborative)
+      // Fetch participants (always fetch to show added friends)
       List<Map<String, dynamic>> participants = [];
-      if (task['is_collaborative'] == true) {
+      try {
         participants = await taskService.getTaskParticipants(_taskId!);
+      } catch (e) {
+        // If no participants or error, continue with empty list
+        debugPrint('Error loading participants: $e');
       }
 
-      // Fetch comments (only if collaborative)
+      // Fetch comments (if collaborative or has participants)
       List<Map<String, dynamic>> comments = [];
-      if (task['is_collaborative'] == true) {
-        comments = await taskService.getTaskComments(_taskId!);
+      if (task['is_collaborative'] == true || participants.isNotEmpty) {
+        try {
+          comments = await taskService.getTaskComments(_taskId!);
+        } catch (e) {
+          debugPrint('Error loading comments: $e');
+        }
       }
 
       setState(() {
@@ -728,10 +744,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     hasStreakBonus: hasStreakBonus,
                   ),
 
-                // Participants (always show, with option to add friends)
+                // Participants (always show if has participants or can add friends)
                 ParticipantsWidget(
                   participants: _participants,
-                  isCollaborative: _taskData!['is_collaborative'] == true,
+                  isCollaborative: _taskData!['is_collaborative'] == true || _participants.isNotEmpty,
                   onSelectFriends: _handleSelectFriends,
                 ),
 

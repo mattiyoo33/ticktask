@@ -1,3 +1,11 @@
+/// Participants Widget
+/// 
+/// This widget displays the list of participants assigned to a collaborative task. It shows each
+/// participant's profile picture (or initials if no picture is available), name, and completion status.
+/// The widget includes a "Select Friends" button that opens a modal for adding or removing friends
+/// from the task. It handles both empty states (when no participants exist yet) and populated states
+/// (showing all assigned participants). The widget is conditionally displayed based on whether the
+/// task is collaborative, has participants, or allows friend selection.
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
@@ -22,7 +30,7 @@ class ParticipantsWidget extends StatelessWidget {
 
     // Show widget if collaborative, has participants, or can select friends
     if (!isCollaborative && participants.isEmpty && onSelectFriends == null) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
     return Container(
