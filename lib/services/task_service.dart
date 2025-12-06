@@ -14,7 +14,7 @@ class TaskService {
   // Get current user ID
   String? get _userId => _supabase.auth.currentUser?.id;
 
-  // Get all tasks for current user
+  // Get all tasks for current user (owned tasks + accepted collaborative tasks)
   Future<List<Map<String, dynamic>>> getTasks({
     String? status,
     String? category,
@@ -24,32 +24,100 @@ class TaskService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      var query = _supabase
+      // Get tasks owned by user
+      var ownedTasksQuery = _supabase
           .from('tasks')
           .select()
           .eq('user_id', _userId!);
 
       if (status != null) {
-        query = query.eq('status', status);
+        ownedTasksQuery = ownedTasksQuery.eq('status', status);
       }
       if (category != null) {
-        query = query.eq('category', category);
+        ownedTasksQuery = ownedTasksQuery.eq('category', category);
       }
       if (dueDate != null) {
-        query = query.eq('due_date', dueDate.toIso8601String());
+        ownedTasksQuery = ownedTasksQuery.eq('due_date', dueDate.toIso8601String());
       }
       if (isRecurring != null) {
-        query = query.eq('is_recurring', isRecurring);
+        ownedTasksQuery = ownedTasksQuery.eq('is_recurring', isRecurring);
       }
 
-      final response = await query.order('due_date', ascending: true).order('created_at', ascending: false);
-      return List<Map<String, dynamic>>.from(response);
+      final ownedTasks = await ownedTasksQuery.order('due_date', ascending: true).order('created_at', ascending: false);
+      
+      // Get collaborative tasks where user is an accepted participant
+      final participantsQuery = await _supabase
+          .from('task_participants')
+          .select('task_id')
+          .eq('user_id', _userId!)
+          .eq('status', 'accepted');
+      
+      final participantTaskIds = (participantsQuery as List)
+          .map((p) => p['task_id'] as String)
+          .toList();
+      
+      List<Map<String, dynamic>> collaborativeTasks = [];
+      if (participantTaskIds.isNotEmpty) {
+        var collaborativeQuery = _supabase
+            .from('tasks')
+            .select()
+            .inFilter('id', participantTaskIds)
+            .eq('is_collaborative', true);
+        
+        if (status != null) {
+          collaborativeQuery = collaborativeQuery.eq('status', status);
+        }
+        if (category != null) {
+          collaborativeQuery = collaborativeQuery.eq('category', category);
+        }
+        if (dueDate != null) {
+          collaborativeQuery = collaborativeQuery.eq('due_date', dueDate.toIso8601String());
+        }
+        if (isRecurring != null) {
+          collaborativeQuery = collaborativeQuery.eq('is_recurring', isRecurring);
+        }
+        
+        collaborativeTasks = List<Map<String, dynamic>>.from(
+          await collaborativeQuery.order('due_date', ascending: true).order('created_at', ascending: false)
+        );
+      }
+      
+      // Combine and deduplicate (in case user owns a task they're also a participant in)
+      final allTasks = <String, Map<String, dynamic>>{};
+      for (var task in ownedTasks) {
+        allTasks[task['id'] as String] = task;
+      }
+      for (var task in collaborativeTasks) {
+        allTasks[task['id'] as String] = task;
+      }
+      
+      final result = allTasks.values.toList();
+      // Sort by due_date and created_at
+      result.sort((a, b) {
+        final aDate = a['due_date'] as String?;
+        final bDate = b['due_date'] as String?;
+        if (aDate != null && bDate != null) {
+          return aDate.compareTo(bDate);
+        } else if (aDate != null) {
+          return -1;
+        } else if (bDate != null) {
+          return 1;
+        }
+        final aCreated = a['created_at'] as String?;
+        final bCreated = b['created_at'] as String?;
+        if (aCreated != null && bCreated != null) {
+          return bCreated.compareTo(aCreated); // Newest first
+        }
+        return 0;
+      });
+      
+      return result;
     } catch (e) {
       rethrow;
     }
   }
 
-  // Get today's tasks
+  // Get today's tasks (owned tasks + accepted collaborative tasks)
   Future<List<Map<String, dynamic>>> getTodaysTasks() async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -58,7 +126,8 @@ class TaskService {
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      final response = await _supabase
+      // Get owned tasks
+      final ownedTasks = await _supabase
           .from('tasks')
           .select()
           .eq('user_id', _userId!)
@@ -67,7 +136,62 @@ class TaskService {
           .order('due_time', ascending: true)
           .order('due_date', ascending: true);
 
-      return List<Map<String, dynamic>>.from(response);
+      // Get collaborative tasks where user is an accepted participant
+      final participantsQuery = await _supabase
+          .from('task_participants')
+          .select('task_id')
+          .eq('user_id', _userId!)
+          .eq('status', 'accepted');
+      
+      final participantTaskIds = (participantsQuery as List)
+          .map((p) => p['task_id'] as String)
+          .toList();
+      
+      List<Map<String, dynamic>> collaborativeTasks = [];
+      if (participantTaskIds.isNotEmpty) {
+        collaborativeTasks = List<Map<String, dynamic>>.from(
+          await _supabase
+              .from('tasks')
+              .select()
+              .inFilter('id', participantTaskIds)
+              .eq('is_collaborative', true)
+              .inFilter('status', ['active', 'scheduled'])
+              .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})')
+              .order('due_time', ascending: true)
+              .order('due_date', ascending: true)
+        );
+      }
+      
+      // Combine and deduplicate
+      final allTasks = <String, Map<String, dynamic>>{};
+      for (var task in ownedTasks) {
+        allTasks[task['id'] as String] = task;
+      }
+      for (var task in collaborativeTasks) {
+        allTasks[task['id'] as String] = task;
+      }
+      
+      final result = allTasks.values.toList();
+      // Sort by due_time and due_date
+      result.sort((a, b) {
+        final aTime = a['due_time'] as String?;
+        final bTime = b['due_time'] as String?;
+        if (aTime != null && bTime != null) {
+          return aTime.compareTo(bTime);
+        } else if (aTime != null) {
+          return -1;
+        } else if (bTime != null) {
+          return 1;
+        }
+        final aDate = a['due_date'] as String?;
+        final bDate = b['due_date'] as String?;
+        if (aDate != null && bDate != null) {
+          return aDate.compareTo(bDate);
+        }
+        return 0;
+      });
+      
+      return result;
     } catch (e) {
       rethrow;
     }
@@ -567,13 +691,47 @@ class TaskService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      await _supabase
+      print('🔄 Accepting invitation for task $taskId, user $_userId');
+      
+      // First, verify the participant record exists
+      final check = await _supabase
+          .from('task_participants')
+          .select('*')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+      
+      if (check == null) {
+        throw Exception('Participant record not found for task $taskId');
+      }
+      
+      print('📋 Found participant record: status=${check['status']}, task_id=${check['task_id']}');
+      
+      // Update the status
+      final result = await _supabase
           .from('task_participants')
           .update({'status': 'accepted'})
           .eq('task_id', taskId)
           .eq('user_id', _userId!)
-          .eq('status', 'pending');
+          .select();
+      
+      print('✅ Update result: $result');
+      
+      // Verify the update succeeded
+      final verify = await _supabase
+          .from('task_participants')
+          .select('status')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+      
+      if (verify == null || verify['status'] != 'accepted') {
+        throw Exception('Failed to update participant status. Current status: ${verify?['status']}');
+      }
+      
+      print('✅ Verified: Status is now ${verify['status']}');
     } catch (e) {
+      print('❌ Error accepting invitation: $e');
       rethrow;
     }
   }
@@ -604,6 +762,44 @@ class TaskService {
       // First get the task IDs where user has pending invitations
       // CRITICAL: RLS policy "Users can view task participants" must allow this query
       List<Map<String, dynamic>> participantsResponse;
+      
+      // DIAGNOSTIC: First check ALL participants for this user (without status filter)
+      // This helps us see what's actually in the database
+      try {
+        print('🔍 DIAGNOSTIC: Querying ALL task_participants for user: $_userId (no status filter)');
+        final allParticipantsQuery = await _supabase
+            .from('task_participants')
+            .select('task_id, status, user_id')
+            .eq('user_id', _userId!);
+        
+        final allParticipants = List<Map<String, dynamic>>.from(allParticipantsQuery);
+        print('📊 DIAGNOSTIC: Found ${allParticipants.length} total participants for this user');
+        
+        if (allParticipants.isNotEmpty) {
+          print('📋 DIAGNOSTIC: All participants:');
+          for (var p in allParticipants) {
+            final status = p['status'];
+            final statusStr = status == null ? 'NULL' : status.toString();
+            print('   - task_id: ${p['task_id']}, status: $statusStr');
+          }
+          
+          // Count by status
+          final pendingCount = allParticipants.where((p) => p['status'] == 'pending').length;
+          final acceptedCount = allParticipants.where((p) => p['status'] == 'accepted').length;
+          final refusedCount = allParticipants.where((p) => p['status'] == 'refused').length;
+          final nullCount = allParticipants.where((p) => p['status'] == null).length;
+          
+          print('📊 DIAGNOSTIC: Status breakdown - pending: $pendingCount, accepted: $acceptedCount, refused: $refusedCount, NULL: $nullCount');
+        } else {
+          print('⚠️ DIAGNOSTIC: No participants found at all for this user');
+          print('💡 This could mean: 1) User was never invited, 2) RLS is blocking, 3) Wrong user_id');
+          print('💡 ACTION: Check Supabase dashboard - task_participants table for user_id: $_userId');
+        }
+      } catch (e) {
+        print('❌ DIAGNOSTIC query failed: $e');
+        print('💡 This suggests RLS policy issue - run FIX_TASK_PARTICIPANTS_RLS_VIEW.sql');
+      }
+      
       try {
         // Try querying with status field
         print('🔍 Querying task_participants for user: $_userId with status=pending');

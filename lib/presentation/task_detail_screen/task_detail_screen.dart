@@ -39,6 +39,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   Map<String, dynamic>? _taskData;
   Map<String, dynamic>? _streakData;
   List<Map<String, dynamic>> _participants = [];
+  Map<String, dynamic>? _taskOwner; // Task owner profile
   List<Map<String, dynamic>> _comments = [];
   String? _taskId;
   RealtimeChannel? _commentsChannel;
@@ -107,6 +108,23 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       // Fetch streak data
       final streak = await taskService.getTaskStreak(_taskId!);
 
+      // Fetch task owner profile
+      Map<String, dynamic>? taskOwner;
+      final taskOwnerId = task['user_id'] as String?;
+      if (taskOwnerId != null) {
+        try {
+          final supabase = SupabaseService.client;
+          final ownerProfile = await supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .eq('id', taskOwnerId)
+              .single();
+          taskOwner = ownerProfile;
+        } catch (e) {
+          debugPrint('Error loading task owner: $e');
+        }
+      }
+
       // Fetch participants (always fetch to show added friends)
       List<Map<String, dynamic>> participants = [];
       try {
@@ -114,6 +132,43 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       } catch (e) {
         // If no participants or error, continue with empty list
         debugPrint('Error loading participants: $e');
+      }
+      
+      // Check if current user is a participant (not the owner)
+      Map<String, dynamic>? currentUserParticipant;
+      final currentUserAsync = ref.read(currentUserProvider);
+      final currentUserId = currentUserAsync.value?.id;
+      
+      // If current user is not the owner, check if they're a participant
+      if (currentUserId != null && currentUserId != taskOwnerId) {
+        final currentUserInParticipants = participants.firstWhere(
+          (p) => p['user_id'] == currentUserId,
+          orElse: () => <String, dynamic>{},
+        );
+        
+        if (currentUserInParticipants.isNotEmpty) {
+          // Fetch current user's profile
+          try {
+            final supabase = SupabaseService.client;
+            final userProfile = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .eq('id', currentUserId)
+                .single();
+            
+            currentUserParticipant = {
+              'id': currentUserId,
+              'name': userProfile['full_name'] ?? 'Me',
+              'avatar': userProfile['avatar_url'] ?? '',
+              'semanticLabel': 'My avatar',
+              'isCompleted': false,
+              'contribution': 0,
+              'isMe': true, // Flag to show "me" badge
+            };
+          } catch (e) {
+            debugPrint('Error loading current user profile: $e');
+          }
+        }
       }
 
       // Fetch comments (if collaborative or has participants)
@@ -129,7 +184,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       setState(() {
         _taskData = task;
         _streakData = streak;
-        _participants = _transformParticipants(participants);
+        _taskOwner = taskOwner;
+        _participants = _transformParticipants(participants, currentUserParticipant: currentUserParticipant);
         _comments = _transformComments(comments);
         _isInitialLoading = false;
       });
@@ -148,18 +204,20 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _transformParticipants(List<Map<String, dynamic>> participants) {
+  List<Map<String, dynamic>> _transformParticipants(
+    List<Map<String, dynamic>> participants, {
+    Map<String, dynamic>? currentUserParticipant,
+  }) {
     final currentUserAsync = ref.read(currentUserProvider);
     final currentUserId = currentUserAsync.value?.id;
     
-    // CRITICAL: Filter out current user from participants list
-    // The current user (task owner) should not appear as a participant
+    // Filter out current user from participants list (we'll add them separately with "me" badge)
     final filteredParticipants = participants.where((p) {
       final participantUserId = p['user_id'] as String?;
       return participantUserId != null && participantUserId != currentUserId;
     }).toList();
     
-    return filteredParticipants.map((p) {
+    final transformed = filteredParticipants.map((p) {
       final profile = p['profiles'] as Map<String, dynamic>?;
       return {
         'id': p['user_id'],
@@ -168,8 +226,16 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         'semanticLabel': 'User avatar',
         'isCompleted': false, // TODO: Check if user completed the task
         'contribution': 0, // TODO: Calculate contribution
+        'isMe': false,
       };
     }).toList();
+    
+    // Add current user at the beginning if they're a participant
+    if (currentUserParticipant != null) {
+      transformed.insert(0, currentUserParticipant);
+    }
+    
+    return transformed;
   }
 
   List<Map<String, dynamic>> _transformComments(List<Map<String, dynamic>> comments) {
@@ -757,6 +823,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 // Participants (always show if has participants or can add friends)
                 ParticipantsWidget(
                   participants: _participants,
+                  taskOwner: _taskOwner,
                   isCollaborative: _taskData!['is_collaborative'] == true || _participants.isNotEmpty,
                   onSelectFriends: _handleSelectFriends,
                 ),

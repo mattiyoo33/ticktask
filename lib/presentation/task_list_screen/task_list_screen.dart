@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
@@ -29,10 +30,13 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
   late AnimationController _confettiController;
 
   // Get all tasks from database
+  // Using ref.watch ensures automatic rebuild when provider changes
   List<Map<String, dynamic>> get _allTasks {
     final tasksAsync = ref.watch(allTasksProvider);
     return tasksAsync.when(
-      data: (tasks) => tasks.map((task) {
+      data: (tasks) {
+        debugPrint('📊 _allTasks: Received ${tasks.length} tasks from provider');
+        return tasks.map((task) {
         final dueDate = task['due_date'] != null 
             ? DateTime.parse(task['due_date'] as String)
             : null;
@@ -51,14 +55,17 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           'title': task['title'] ?? '',
           'description': task['description'] ?? '',
           'dueDate': dueDate,
+          'due_date': task['due_date'], // Keep original for compatibility
           'difficulty': task['difficulty'] ?? 'Medium',
           'status': status,
           'isRecurring': task['is_recurring'] ?? false,
+          'is_collaborative': task['is_collaborative'] ?? false, // CRITICAL: Include collaborative flag
           'xpReward': task['xp_reward'] ?? 10,
           'category': task['category'] ?? '',
           'createdAt': createdAt,
         };
-      }).toList(),
+        }).toList();
+      },
       loading: () => [],
       error: (_, __) => [],
     );
@@ -339,9 +346,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
   }
 
   Widget _buildPendingInvitationsSection(BuildContext context) {
+    print('🔍 _buildPendingInvitationsSection: Building invitations section');
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final pendingTasksAsync = ref.watch(pendingCollaborationTasksProvider);
+    print('🔍 _buildPendingInvitationsSection: Watching provider, state: ${pendingTasksAsync.runtimeType}');
 
     return pendingTasksAsync.when(
       data: (pendingTasks) {
@@ -396,26 +405,29 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           ),
         );
       },
-      loading: () => Container(
-        margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-        padding: EdgeInsets.all(4.w),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 3.w),
-            Text(
-              'Loading invitations...',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+      loading: () {
+        print('⏳ UI: Pending invitations loading...');
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+          padding: EdgeInsets.all(4.w),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            ),
-          ],
-        ),
-      ),
+              SizedBox(width: 3.w),
+              Text(
+                'Loading invitations...',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
       error: (error, stack) {
         print('❌ Error loading pending invitations: $error');
         print('📚 Stack trace: $stack');
@@ -626,23 +638,30 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       final taskService = ref.read(taskServiceProvider);
       await taskService.acceptCollaborationInvitation(taskId);
       
-      // Refresh providers
+      debugPrint('✅ Invitation accepted for task $taskId');
+      
+      // Invalidate providers to trigger refresh
       ref.invalidate(pendingCollaborationTasksProvider);
       ref.invalidate(allTasksProvider);
       ref.invalidate(todaysTasksProvider);
       
-      // Force rebuild
+      // Force a full refresh using the refresh handler
+      // This ensures all data is reloaded and UI is updated
+      await _handleRefresh();
+      
       if (mounted) {
-        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Collaboration invitation accepted!'),
+            content: Text('✅ Collaboration invitation accepted! Task added to your list.'),
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
           ),
         );
+        
+        HapticFeedback.mediumImpact();
       }
     } catch (e) {
+      debugPrint('❌ Error accepting invitation: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -884,42 +903,43 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
 
           // Task List
           Expanded(
-            child: hasAnyTasks
-                ? RefreshIndicator(
-                    onRefresh: _handleRefresh,
-                    color: colorScheme.primary,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        children: [
-                          // Pending Collaboration Invitations
-                          _buildPendingInvitationsSection(context),
-                          
-                          // Divider between invitations and tasks
-                          if (_hasPendingInvitations) ...[
-                            Divider(
-                              height: 4.h,
-                              thickness: 2,
-                              color: colorScheme.outline.withValues(alpha: 0.2),
-                              indent: 4.w,
-                              endIndent: 4.w,
-                            ),
-                          ],
-                          
-                          // Overdue Tasks
-                          TaskSectionWidget(
-                            title: 'Overdue',
-                            tasks: groupedTasks['overdue']!,
-                            titleColor: colorScheme.error,
-                            isMultiSelectMode: _isMultiSelectMode,
-                            selectedTaskIds: _selectedTaskIds,
-                            onTaskSelectionChanged: _handleTaskSelectionChanged,
-                            onTaskTap: _handleTaskTap,
-                            onTaskComplete: _handleTaskComplete,
-                            onTaskEdit: _handleTaskEdit,
-                            onTaskDelete: _handleTaskDelete,
-                            onTaskShare: _handleTaskShare,
-                          ),
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh,
+              color: colorScheme.primary,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    // Pending Collaboration Invitations (ALWAYS show, even if user has no tasks)
+                    _buildPendingInvitationsSection(context),
+                    
+                    // Divider between invitations and tasks
+                    if (_hasPendingInvitations) ...[
+                      Divider(
+                        height: 4.h,
+                        thickness: 2,
+                        color: colorScheme.outline.withValues(alpha: 0.2),
+                        indent: 4.w,
+                        endIndent: 4.w,
+                      ),
+                    ],
+                    
+                    // Tasks (only show if user has tasks)
+                    if (hasAnyTasks) ...[
+                      // Overdue Tasks
+                      TaskSectionWidget(
+                        title: 'Overdue',
+                        tasks: groupedTasks['overdue']!,
+                        titleColor: colorScheme.error,
+                        isMultiSelectMode: _isMultiSelectMode,
+                        selectedTaskIds: _selectedTaskIds,
+                        onTaskSelectionChanged: _handleTaskSelectionChanged,
+                        onTaskTap: _handleTaskTap,
+                        onTaskComplete: _handleTaskComplete,
+                        onTaskEdit: _handleTaskEdit,
+                        onTaskDelete: _handleTaskDelete,
+                        onTaskShare: _handleTaskShare,
+                      ),
 
                           // Today Tasks
                           TaskSectionWidget(
@@ -996,26 +1016,30 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                               onTaskShare: _handleTaskShare,
                             ),
 
-                          SizedBox(height: 10.h),
-                        ],
+                        SizedBox(height: 10.h),
+                      ],
+                    // Show empty state only if no tasks and no invitations
+                    if (!hasAnyTasks && !_hasPendingInvitations) ...[
+                      EmptyStateWidget(
+                        title: _searchQuery.isNotEmpty
+                            ? 'No tasks found'
+                            : 'No tasks yet',
+                        subtitle: _searchQuery.isNotEmpty
+                            ? 'Try adjusting your search or filters'
+                            : 'Create your first task and start your productivity journey!',
+                        buttonText: 'Create Your First Task',
+                        onButtonPressed: () {
+                          Navigator.pushNamed(context, '/task-creation-screen');
+                          HapticFeedback.lightImpact();
+                        },
+                        mascotImageUrl:
+                            'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
                       ),
-                    ),
-                  )
-                : EmptyStateWidget(
-                    title: _searchQuery.isNotEmpty
-                        ? 'No tasks found'
-                        : 'No tasks yet',
-                    subtitle: _searchQuery.isNotEmpty
-                        ? 'Try adjusting your search or filters'
-                        : 'Create your first task and start your productivity journey!',
-                    buttonText: 'Create Your First Task',
-                    onButtonPressed: () {
-                      Navigator.pushNamed(context, '/task-creation-screen');
-                      HapticFeedback.lightImpact();
-                    },
-                    mascotImageUrl:
-                        'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-                  ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),

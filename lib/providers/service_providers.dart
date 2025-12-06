@@ -130,12 +130,18 @@ final pendingCollaborationTasksProvider = FutureProvider<List<Map<String, dynami
   final authState = ref.watch(authStateProvider);
   final authStateValue = authState.value;
   
+  print('🔍 pendingCollaborationTasksProvider: authState.value = ${authStateValue?.session != null ? "authenticated" : "null"}');
+  
   // If not authenticated, return empty list
   if (authStateValue?.session == null) {
+    print('⚠️ pendingCollaborationTasksProvider: No session, returning empty list');
     return [];
   }
   
+  print('✅ pendingCollaborationTasksProvider: Session exists, fetching pending tasks...');
   final taskService = ref.watch(taskServiceProvider);
-  return await taskService.getPendingCollaborationTasks();
+  final result = await taskService.getPendingCollaborationTasks();
+  print('📊 pendingCollaborationTasksProvider: Fetched ${result.length} pending tasks');
+  return result;
 });
 

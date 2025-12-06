@@ -13,12 +13,14 @@ import '../../../core/app_export.dart';
 
 class ParticipantsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> participants;
+  final Map<String, dynamic>? taskOwner; // Task owner profile
   final bool isCollaborative;
   final VoidCallback? onSelectFriends;
 
   const ParticipantsWidget({
     super.key,
     required this.participants,
+    this.taskOwner,
     this.isCollaborative = false,
     this.onSelectFriends,
   });
@@ -61,7 +63,7 @@ class ParticipantsWidget extends StatelessWidget {
               SizedBox(width: 2.w),
               Expanded(
                 child: Text(
-                  'Participants (${participants.length})',
+                  'Participants (${(taskOwner != null ? 1 : 0) + participants.length})',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
@@ -87,7 +89,7 @@ class ParticipantsWidget extends StatelessWidget {
             ],
           ),
           SizedBox(height: 2.h),
-          if (participants.isEmpty)
+          if (taskOwner == null && participants.isEmpty)
             Padding(
               padding: EdgeInsets.symmetric(vertical: 2.h),
               child: Center(
@@ -122,10 +124,94 @@ class ParticipantsWidget extends StatelessWidget {
             ListView.separated(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              itemCount: participants.length,
+              itemCount: (taskOwner != null ? 1 : 0) + participants.length,
               separatorBuilder: (context, index) => SizedBox(height: 2.h),
               itemBuilder: (context, index) {
-              final participant = participants[index];
+                // Show owner first if exists
+                if (taskOwner != null && index == 0) {
+                  final ownerName = taskOwner!['full_name'] as String? ?? 
+                                   'Task Owner';
+                  final ownerAvatar = taskOwner!['avatar_url'] as String? ?? '';
+                  
+                  return Row(
+                    children: [
+                      // Avatar
+                      Container(
+                        width: 10.w,
+                        height: 10.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: ownerAvatar.isNotEmpty
+                              ? CustomImageWidget(
+                                  imageUrl: ownerAvatar,
+                                  width: 10.w,
+                                  height: 10.w,
+                                  fit: BoxFit.cover,
+                                  semanticLabel: 'Task owner avatar',
+                                )
+                              : Container(
+                                  color: colorScheme.primary.withValues(alpha: 0.1),
+                                  child: Center(
+                                    child: Text(
+                                      ownerName.isNotEmpty ? ownerName[0].toUpperCase() : '?',
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      SizedBox(width: 3.w),
+                      // Name and status
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  ownerName,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                SizedBox(width: 2.w),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 2.w, vertical: 0.5.h),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Owner',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                
+                // Show other participants
+                final participantIndex = taskOwner != null ? index - 1 : index;
+                final participant = participants[participantIndex];
               final name = participant['name'] as String? ?? 'Unknown';
               final avatar = participant['avatar'] as String? ?? '';
               final semanticLabel =
@@ -187,6 +273,23 @@ class ParticipantsWidget extends StatelessWidget {
                         ),
                         Row(
                           children: [
+                            if (participant['isMe'] == true) ...[
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 2.w, vertical: 0.5.h),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.secondary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Me',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.secondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
                             Container(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 2.w, vertical: 0.5.h),
@@ -207,6 +310,7 @@ class ParticipantsWidget extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            ],
                             if (contribution > 0) ...[
                               SizedBox(width: 2.w),
                               Text(

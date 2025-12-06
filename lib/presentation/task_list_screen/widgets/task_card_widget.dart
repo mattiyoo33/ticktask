@@ -35,6 +35,7 @@ class TaskCardWidget extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isCompleted = task['status'] == 'completed';
     final isOverdue = task['status'] == 'overdue';
+    final isCollaborative = task['is_collaborative'] == true;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -114,15 +115,24 @@ class TaskCardWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? colorScheme.primary.withValues(alpha: 0.1)
+                  : isCollaborative
+                      ? colorScheme.primaryContainer.withValues(alpha: 0.1)
                   : colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
                   ? Border.all(color: colorScheme.primary, width: 2)
+                  : isCollaborative
+                      ? Border.all(
+                          color: colorScheme.primary.withValues(alpha: 0.4),
+                          width: 1.5,
+                        )
                   : Border.all(
                       color: colorScheme.outline.withValues(alpha: 0.2)),
               boxShadow: [
                 BoxShadow(
-                  color: colorScheme.shadow.withValues(alpha: 0.1),
+                  color: isCollaborative
+                      ? colorScheme.primary.withValues(alpha: 0.15)
+                      : colorScheme.shadow.withValues(alpha: 0.1),
                   offset: const Offset(0, 2),
                   blurRadius: 8,
                   spreadRadius: 0,
@@ -143,6 +153,14 @@ class TaskCardWidget extends StatelessWidget {
                         ),
                         SizedBox(width: 2.w),
                       ],
+                      if (isCollaborative) ...[
+                        CustomIconWidget(
+                          iconName: 'group',
+                          color: colorScheme.primary,
+                          size: 18,
+                        ),
+                        SizedBox(width: 1.5.w),
+                      ],
                       Expanded(
                         child: Text(
                           task['title'] ?? 'Untitled Task',
@@ -151,6 +169,8 @@ class TaskCardWidget extends StatelessWidget {
                                 isCompleted ? TextDecoration.lineThrough : null,
                             color: isCompleted
                                 ? colorScheme.onSurfaceVariant
+                                : isCollaborative
+                                    ? colorScheme.primary
                                 : colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                           ),
@@ -178,6 +198,36 @@ class TaskCardWidget extends StatelessWidget {
                   SizedBox(height: 2.h),
                   Row(
                     children: [
+                      if (isCollaborative) ...[
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 2.w, vertical: 0.5.h),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'group',
+                                color: colorScheme.primary,
+                                size: 12,
+                              ),
+                              SizedBox(width: 1.w),
+                              Text(
+                                'Collaborative',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 9.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 2.w),
+                      ],
                       CustomIconWidget(
                         iconName: 'schedule',
                         color: isOverdue
@@ -187,7 +237,7 @@ class TaskCardWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 1.w),
                       Text(
-                        _formatDueDate(task['dueDate']),
+                        _formatDueDate(task['dueDate'] ?? task['due_date']),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: isOverdue
                               ? colorScheme.error
