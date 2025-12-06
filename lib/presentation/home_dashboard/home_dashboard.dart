@@ -10,7 +10,6 @@ import './widgets/quick_actions_widget.dart';
 import './widgets/recent_activity_widget.dart';
 import './widgets/tasker_mascot_widget.dart';
 import './widgets/todays_tasks_widget.dart';
-import './widgets/pixel_art_animation_widget.dart';
 
 class HomeDashboard extends ConsumerStatefulWidget {
   const HomeDashboard({super.key});
@@ -257,12 +256,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                     SizedBox(height: 2.h),
                     TaskerMascotWidget(
                       state: _getMascotState(),
-                    ),
-                    SizedBox(height: 2.h),
-                    // Pixel art animation based on active tasks
-                    PixelArtAnimationWidget(
-                      activeTasks: _todaysTasks.where((task) => task['isCompleted'] == false).toList(),
-                      aiService: AIService(),
                     ),
                     SizedBox(height: 2.h),
                     TodaysTasksWidget(
