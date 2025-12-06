@@ -449,127 +449,141 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   void _deleteTask() async {
     if (_taskId == null) return;
 
-    showDialog(
+    // Save the screen context before showing dialog
+    final screenContext = context;
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Task'),
         content: const Text(
             'Are you sure you want to delete this task? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                final taskService = ref.read(taskServiceProvider);
-                await taskService.deleteTask(_taskId!);
-                
-                // Refresh task lists
-                ref.invalidate(allTasksProvider);
-                ref.invalidate(todaysTasksProvider);
-                ref.invalidate(pendingCollaborationTasksProvider);
-                
-                if (mounted) {
-                  Navigator.pop(context); // Go back to previous screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Task deleted'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error deleting task: ${e.toString()}'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
-            },
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+
+    // If user confirmed deletion
+    if (confirmed == true && mounted) {
+      try {
+        final taskService = ref.read(taskServiceProvider);
+        await taskService.deleteTask(_taskId!);
+        
+        debugPrint('✅ Successfully deleted task $_taskId');
+        
+        // Invalidate providers to trigger refresh
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(todaysTasksProvider);
+        ref.invalidate(pendingCollaborationTasksProvider);
+        
+        // Wait for providers to actually refresh by reading them
+        try {
+          debugPrint('🔄 Waiting for allTasksProvider to refresh...');
+          await ref.read(allTasksProvider.future);
+          debugPrint('✅ allTasksProvider refreshed');
+        } catch (e) {
+          debugPrint('⚠️ Error refreshing allTasksProvider: $e');
+        }
+        
+        // Small delay to ensure providers refresh
+        await Future.delayed(const Duration(milliseconds: 200));
+        
+        // Navigate back to task list with result
+        // The task list screen will handle showing the success message
+        if (mounted) {
+          Navigator.pop(screenContext, 'deleted'); // Pass 'deleted' as result
+        }
+      } catch (e) {
+        debugPrint('❌ Error deleting task: $e');
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(screenContext).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting task: ${e.toString()}'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _leaveTask() async {
     if (_taskId == null) return;
 
-    showDialog(
+    // Save the screen context before showing dialog
+    final screenContext = context;
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Leave Task'),
         content: const Text(
             'Are you sure you want to leave this collaborative task? If you are the last participant, the task will become an individual task.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // Close confirmation dialog
-              try {
-                final taskService = ref.read(taskServiceProvider);
-                await taskService.leaveTask(_taskId!);
-                
-                debugPrint('✅ Successfully left task $_taskId');
-                
-                // Invalidate providers to trigger refresh
-                ref.invalidate(allTasksProvider);
-                ref.invalidate(todaysTasksProvider);
-                ref.invalidate(pendingCollaborationTasksProvider);
-                
-                // Wait for providers to actually refresh by reading them
-                // This ensures the data is fetched before we navigate back
-                try {
-                  debugPrint('🔄 Waiting for allTasksProvider to refresh...');
-                  await ref.read(allTasksProvider.future);
-                  debugPrint('✅ allTasksProvider refreshed');
-                } catch (e) {
-                  debugPrint('⚠️ Error refreshing allTasksProvider: $e');
-                }
-                
-                // Small delay to ensure UI updates
-                await Future.delayed(const Duration(milliseconds: 300));
-                
-                if (mounted) {
-                  Navigator.pop(context); // Go back to task list screen
-                  
-                  // Show success message after navigation
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Left task successfully. Task removed from your list.'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              } catch (e) {
-                debugPrint('❌ Error leaving task: $e');
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error leaving task: ${e.toString()}'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                }
-              }
-            },
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Leave', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+
+    // If user confirmed leaving
+    if (confirmed == true && mounted) {
+      try {
+        final taskService = ref.read(taskServiceProvider);
+        await taskService.leaveTask(_taskId!);
+        
+        debugPrint('✅ Successfully left task $_taskId');
+        
+        // Invalidate providers to trigger refresh
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(todaysTasksProvider);
+        ref.invalidate(pendingCollaborationTasksProvider);
+        
+        // Wait for providers to actually refresh by reading them
+        try {
+          debugPrint('🔄 Waiting for allTasksProvider to refresh...');
+          await ref.read(allTasksProvider.future);
+          debugPrint('✅ allTasksProvider refreshed');
+        } catch (e) {
+          debugPrint('⚠️ Error refreshing allTasksProvider: $e');
+        }
+        
+        // Small delay to ensure providers refresh
+        await Future.delayed(const Duration(milliseconds: 200));
+        
+        // Navigate back to task list with result
+        // The task list screen will handle showing the success message
+        if (mounted) {
+          Navigator.pop(screenContext, 'left'); // Pass 'left' as result
+        }
+      } catch (e) {
+        debugPrint('❌ Error leaving task: $e');
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(screenContext).showSnackBar(
+            SnackBar(
+              content: Text('Error leaving task: ${e.toString()}'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _handleMarkComplete() async {

@@ -81,9 +81,24 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     
     // Refresh pending invitations when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.invalidate(pendingCollaborationTasksProvider);
-      print('🔄 Refreshed pendingCollaborationTasksProvider on screen load');
+      _refreshAllData();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only refresh on first build, not every time dependencies change
+    // We'll use a different approach for navigation-based refresh
+  }
+
+  void _refreshAllData() {
+    debugPrint('🔄 Refreshing all task data...');
+    ref.invalidate(allTasksProvider);
+    ref.invalidate(todaysTasksProvider);
+    ref.invalidate(pendingCollaborationTasksProvider);
+    ref.invalidate(recentActivitiesProvider);
+    debugPrint('✅ All providers invalidated');
   }
 
   @override
@@ -332,8 +347,41 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     HapticFeedback.lightImpact();
   }
 
-  void _handleTaskTap(Map<String, dynamic> task) {
-    Navigator.pushNamed(context, '/task-detail-screen', arguments: task);
+  void _handleTaskTap(Map<String, dynamic> task) async {
+    // Navigate to task detail and wait for result
+    final result = await Navigator.pushNamed(
+      context, 
+      '/task-detail-screen', 
+      arguments: task,
+    );
+    
+    // If task was deleted or left, refresh the list
+    if (result == true || result == 'deleted' || result == 'left') {
+      debugPrint('🔄 Task was deleted or left, refreshing list...');
+      _refreshAllData();
+      // Wait for providers to refresh
+      try {
+        await ref.read(allTasksProvider.future);
+        debugPrint('✅ Task list refreshed');
+        
+        // Show success message on task list screen
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result == 'deleted' 
+                  ? '✅ Task deleted. Removed from your list.'
+                  : '✅ Left task. Removed from your list.',
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error refreshing task list: $e');
+      }
+    }
   }
 
   bool get _hasPendingInvitations {
