@@ -10,6 +10,7 @@ import './widgets/quick_templates_widget.dart';
 import './widgets/recurring_task_widget.dart';
 import './widgets/ai_task_generator_widget.dart';
 import './widgets/select_collaborators_modal_widget.dart';
+import './widgets/category_selection_widget.dart';
 
 class TaskCreationScreen extends ConsumerStatefulWidget {
   const TaskCreationScreen({super.key});
@@ -39,6 +40,10 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   bool _collaborationEnabled = false;
   String _selectedCategory = 'Personal';
   List<String> _selectedCollaboratorIds = []; // Selected friend IDs for collaboration
+  
+  // Public task options
+  bool _isPublicTask = false;
+  String? _selectedCategoryId; // Category ID for public tasks
 
   // UI state
   bool _isLoading = false;
@@ -53,6 +58,19 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
     super.initState();
     _initializeAnimations();
     _titleController.addListener(_validateForm);
+    _checkArguments();
+  }
+
+  void _checkArguments() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        final isPublic = args['isPublic'] as bool? ?? false;
+        setState(() {
+          _isPublicTask = isPublic;
+        });
+      }
+    });
   }
 
   void _initializeAnimations() {
@@ -242,25 +260,56 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       }
 
       // Create task in database
-      await taskService.createTask(
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        category: _selectedCategory,
-        difficulty: _selectedDifficulty,
-        dueDate: _selectedDueDate,
-        dueTime: dueTime,
-        xpReward: xpReward,
-        isRecurring: _isRecurring,
-        recurrenceFrequency: _isRecurring ? _recurringFrequency : null,
-        recurrenceInterval: 1,
-        nextOccurrence: nextOccurrence,
-        isCollaborative: _collaborationEnabled,
-        participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
-      );
+      if (_isPublicTask) {
+        // Create public task
+        if (_selectedCategoryId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please select a category for your public task')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        final publicTaskService = ref.read(publicTaskServiceProvider);
+        await publicTaskService.createPublicTask(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          categoryId: _selectedCategoryId!,
+          dueDate: _selectedDueDate,
+          difficulty: _selectedDifficulty.toLowerCase(),
+        );
+
+        // Refresh public tasks provider
+        ref.invalidate(publicTasksProvider({
+          'categoryId': null,
+          'searchQuery': null,
+          'limit': 50,
+          'offset': 0,
+        }));
+      } else {
+        // Create private task
+        await taskService.createTask(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory,
+          difficulty: _selectedDifficulty,
+          dueDate: _selectedDueDate,
+          dueTime: dueTime,
+          xpReward: xpReward,
+          isRecurring: _isRecurring,
+          recurrenceFrequency: _isRecurring ? _recurringFrequency : null,
+          recurrenceInterval: 1,
+          nextOccurrence: nextOccurrence,
+          isCollaborative: _collaborationEnabled,
+          participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
+        );
+      }
 
       // Refresh providers to show new task
-      ref.invalidate(allTasksProvider);
-      ref.invalidate(todaysTasksProvider);
+      if (!_isPublicTask) {
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(todaysTasksProvider);
+      }
 
       // Show success message
       if (mounted) {
@@ -396,7 +445,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         backgroundColor: colorScheme.surface,
         appBar: AppBar(
           title: Text(
-            'Create Task',
+            _isPublicTask ? 'Create Public Task' : 'Create Task',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
@@ -631,8 +680,22 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                 ),
                 SizedBox(height: 4.h),
 
-                // Advanced Options
-                AdvancedOptionsWidget(
+                // Category Selection (for public tasks)
+                if (_isPublicTask) ...[
+                  CategorySelectionWidget(
+                    selectedCategoryId: _selectedCategoryId,
+                    onCategorySelected: (categoryId) {
+                      setState(() {
+                        _selectedCategoryId = categoryId;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 4.h),
+                ],
+
+                // Advanced Options (only for private tasks)
+                if (!_isPublicTask) ...[
+                  AdvancedOptionsWidget(
                   isExpanded: _advancedOptionsExpanded,
                   reminderEnabled: _reminderEnabled,
                   reminderTime: _reminderTime,
@@ -668,8 +731,9 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                   },
                   selectedCollaboratorIds: _selectedCollaboratorIds,
                   onSelectCollaborators: _collaborationEnabled ? _handleSelectCollaborators : null,
-                ),
-                SizedBox(height: 6.h),
+                  ),
+                  SizedBox(height: 4.h),
+                ],
 
                 // Create Task Button
                 SizedBox(

@@ -12,6 +12,7 @@ import './widgets/batch_actions_toolbar_widget.dart';
 import './widgets/empty_state_widget.dart';
 import './widgets/search_filter_bar_widget.dart';
 import './widgets/task_section_widget.dart';
+import '../discover_screen/widgets/task_type_choice_modal.dart';
 
 class TaskListScreen extends ConsumerStatefulWidget {
   const TaskListScreen({super.key});
@@ -689,6 +690,25 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     }
   }
 
+  void _showTaskTypeChoice(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
+      ),
+      builder: (context) => TaskTypeChoiceModal(
+        onPrivateSelected: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': false});
+        },
+        onPublicSelected: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': true});
+        },
+      ),
+    );
+  }
+
   Future<void> _handleRefuseInvitation(String taskId) async {
     try {
       final taskService = ref.read(taskServiceProvider);
@@ -1059,10 +1079,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       bottomNavigationBar: const CustomBottomBar(currentIndex: 2),
       floatingActionButton: !_isMultiSelectMode
           ? FloatingActionButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/task-creation-screen');
-                HapticFeedback.lightImpact();
-              },
+              onPressed: () => _showTaskTypeChoice(context),
               child: CustomIconWidget(
                 iconName: 'add',
                 color: colorScheme.onPrimary,

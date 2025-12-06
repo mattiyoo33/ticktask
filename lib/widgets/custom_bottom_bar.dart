@@ -38,10 +38,10 @@ class CustomBottomBar extends StatelessWidget {
       route: '/home-dashboard',
     ),
     _BottomNavItem(
-      icon: Icons.add_task_outlined,
-      selectedIcon: Icons.add_task,
-      label: 'Create',
-      route: '/task-creation-screen',
+      icon: Icons.explore_outlined,
+      selectedIcon: Icons.explore,
+      label: 'Discover',
+      route: '/discover-screen',
     ),
     _BottomNavItem(
       icon: Icons.list_alt_outlined,
