@@ -62,6 +62,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           'status': status,
           'isRecurring': task['is_recurring'] ?? false,
           'is_collaborative': task['is_collaborative'] ?? false, // CRITICAL: Include collaborative flag
+          'is_public': task['is_public'] ?? false, // Include public flag
           'xpReward': task['xp_reward'] ?? 10,
           'category': task['category'] ?? '',
           'createdAt': createdAt,

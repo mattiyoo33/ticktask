@@ -82,12 +82,51 @@ class TaskService {
         );
       }
       
+      // Get public tasks where user has joined
+      final publicParticipantsQuery = await _supabase
+          .from('public_task_participants')
+          .select('task_id')
+          .eq('user_id', _userId!);
+      
+      final publicTaskIds = (publicParticipantsQuery as List)
+          .map((p) => p['task_id'] as String)
+          .toList();
+      
+      List<Map<String, dynamic>> publicTasks = [];
+      if (publicTaskIds.isNotEmpty) {
+        var publicQuery = _supabase
+            .from('tasks')
+            .select()
+            .inFilter('id', publicTaskIds)
+            .eq('is_public', true);
+        
+        if (status != null) {
+          publicQuery = publicQuery.eq('status', status);
+        }
+        if (category != null) {
+          publicQuery = publicQuery.eq('category', category);
+        }
+        if (dueDate != null) {
+          publicQuery = publicQuery.eq('due_date', dueDate.toIso8601String());
+        }
+        if (isRecurring != null) {
+          publicQuery = publicQuery.eq('is_recurring', isRecurring);
+        }
+        
+        publicTasks = List<Map<String, dynamic>>.from(
+          await publicQuery.order('due_date', ascending: true).order('created_at', ascending: false)
+        );
+      }
+      
       // Combine and deduplicate (in case user owns a task they're also a participant in)
       final allTasks = <String, Map<String, dynamic>>{};
       for (var task in ownedTasks) {
         allTasks[task['id'] as String] = task;
       }
       for (var task in collaborativeTasks) {
+        allTasks[task['id'] as String] = task;
+      }
+      for (var task in publicTasks) {
         allTasks[task['id'] as String] = task;
       }
       

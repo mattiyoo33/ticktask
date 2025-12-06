@@ -2,6 +2,7 @@
 /// 
 /// Handles all public task operations including creating, joining, leaving,
 /// and fetching public tasks with categories and search functionality.
+import 'package:flutter/foundation.dart';
 import 'supabase_service.dart';
 
 class PublicTaskService {
@@ -31,6 +32,7 @@ class PublicTaskService {
     int? offset,
   }) async {
     try {
+      debugPrint('🔍 Fetching public tasks with filters: categoryId=$categoryId, searchQuery=$searchQuery');
       var filterQuery = _supabase
           .from('tasks')
           .select('''
@@ -60,8 +62,11 @@ class PublicTaskService {
       }
 
       final response = await orderedQuery;
-      return List<Map<String, dynamic>>.from(response);
+      final tasks = List<Map<String, dynamic>>.from(response);
+      debugPrint('✅ Fetched ${tasks.length} public tasks');
+      return tasks;
     } catch (e) {
+      debugPrint('❌ Error fetching public tasks: $e');
       throw Exception('Failed to fetch public tasks: $e');
     }
   }

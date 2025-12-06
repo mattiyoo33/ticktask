@@ -36,6 +36,7 @@ class TaskCardWidget extends StatelessWidget {
     final isCompleted = task['status'] == 'completed';
     final isOverdue = task['status'] == 'overdue';
     final isCollaborative = task['is_collaborative'] == true;
+    final isPublic = task['is_public'] == true;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -115,23 +116,23 @@ class TaskCardWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? colorScheme.primary.withValues(alpha: 0.1)
-                  : isCollaborative
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.1)
+                  : isCollaborative || isPublic
+                      ? Colors.green.withValues(alpha: 0.1)
                   : colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
                   ? Border.all(color: colorScheme.primary, width: 2)
-                  : isCollaborative
+                  : isCollaborative || isPublic
                       ? Border.all(
-                          color: colorScheme.primary.withValues(alpha: 0.4),
+                          color: Colors.green.withValues(alpha: 0.4),
                           width: 1.5,
                         )
                   : Border.all(
                       color: colorScheme.outline.withValues(alpha: 0.2)),
               boxShadow: [
                 BoxShadow(
-                  color: isCollaborative
-                      ? colorScheme.primary.withValues(alpha: 0.15)
+                  color: isCollaborative || isPublic
+                      ? Colors.green.withValues(alpha: 0.15)
                       : colorScheme.shadow.withValues(alpha: 0.1),
                   offset: const Offset(0, 2),
                   blurRadius: 8,
@@ -153,10 +154,10 @@ class TaskCardWidget extends StatelessWidget {
                         ),
                         SizedBox(width: 2.w),
                       ],
-                      if (isCollaborative) ...[
+                      if (isCollaborative || isPublic) ...[
                         CustomIconWidget(
-                          iconName: 'group',
-                          color: colorScheme.primary,
+                          iconName: isPublic ? 'public' : 'group',
+                          color: Colors.green,
                           size: 18,
                         ),
                         SizedBox(width: 1.5.w),
@@ -169,8 +170,8 @@ class TaskCardWidget extends StatelessWidget {
                                 isCompleted ? TextDecoration.lineThrough : null,
                             color: isCompleted
                                 ? colorScheme.onSurfaceVariant
-                                : isCollaborative
-                                    ? colorScheme.primary
+                                : isCollaborative || isPublic
+                                    ? Colors.green.shade700
                                 : colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                           ),
@@ -203,22 +204,52 @@ class TaskCardWidget extends StatelessWidget {
                           padding: EdgeInsets.symmetric(
                               horizontal: 2.w, vertical: 0.5.h),
                           decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.1),
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CustomIconWidget(
-                                iconName: 'group',
-                                color: colorScheme.primary,
+                                iconName: 'lock',
+                                color: Colors.green.shade700,
                                 size: 12,
                               ),
                               SizedBox(width: 1.w),
                               Text(
-                                'Collaborative',
+                                'Private',
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.primary,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 9.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 2.w),
+                      ],
+                      if (isPublic) ...[
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 2.w, vertical: 0.5.h),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'public',
+                                color: Colors.green.shade700,
+                                size: 12,
+                              ),
+                              SizedBox(width: 1.w),
+                              Text(
+                                'Public',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: Colors.green.shade700,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 9.sp,
                                 ),

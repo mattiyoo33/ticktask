@@ -88,9 +88,16 @@ CREATE POLICY "Users can leave public tasks"
   USING (auth.uid() = user_id);
 
 -- 7. RLS Policy for public tasks (anyone can view public tasks)
+-- Drop existing policy if it exists
+DROP POLICY IF EXISTS "Anyone can view public tasks" ON public.tasks;
+
 CREATE POLICY "Anyone can view public tasks"
   ON public.tasks FOR SELECT
-  USING (is_public = true OR user_id = auth.uid());
+  USING (is_public = true OR user_id = auth.uid() OR 
+         id IN (
+           SELECT task_id FROM public.public_task_participants 
+           WHERE user_id = auth.uid()
+         ));
 
 -- 8. Function to update public_join_count
 CREATE OR REPLACE FUNCTION update_public_task_join_count()

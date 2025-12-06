@@ -279,13 +279,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           difficulty: _selectedDifficulty.toLowerCase(),
         );
 
-        // Refresh public tasks provider
-        ref.invalidate(publicTasksProvider({
-          'categoryId': null,
-          'searchQuery': null,
-          'limit': 50,
-          'offset': 0,
-        }));
+        // Refresh public tasks provider - invalidate all variations
+        ref.invalidate(publicTasksProvider);
       } else {
         // Create private task
         await taskService.createTask(
