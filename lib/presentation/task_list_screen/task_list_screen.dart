@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../utils/avatar_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import './widgets/batch_actions_toolbar_widget.dart';
@@ -571,108 +572,74 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         children: [
           Row(
             children: [
-              if (ownerAvatar.isNotEmpty)
-                Container(
-                  width: 10.w,
-                  height: 10.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: NetworkImage(ownerAvatar),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  width: 10.w,
-                  height: 10.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: colorScheme.primary.withValues(alpha: 0.1),
-                  ),
-                  child: Center(
-                    child: Text(
-                      ownerName.isNotEmpty ? ownerName[0].toUpperCase() : '?',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              Container(
+                width: 10.w,
+                height: 10.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: 0.2),
+                    width: 1,
                   ),
                 ),
-              SizedBox(width: 3.w),
+                child: Center(
+                  child: CustomIconWidget(
+                    iconName: AvatarUtils.getAvatarIcon(ownerAvatar),
+                    color: colorScheme.primary,
+                    size: 6.w,
+                  ),
+                ),
+              ),
+              SizedBox(width: 2.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       ownerName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      'invited you to collaborate',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    if (description.isNotEmpty) ...[
+                      SizedBox(height: 0.5.h),
+                      Text(
+                        description,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          if (description.isNotEmpty) ...[
-            SizedBox(height: 1.h),
-            Text(
-              description,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          SizedBox(height: 2.h),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _handleRefuseInvitation(taskId),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: colorScheme.error),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              SizedBox(width: 2.w),
+              // Accept/Refuse buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: CustomIconWidget(
+                      iconName: 'check',
+                      color: AppTheme.successLight,
+                      size: 5.w,
                     ),
+                    onPressed: () => _handleAcceptInvitation(taskId),
+                    tooltip: 'Accept',
                   ),
-                  child: Text(
-                    'Refuse',
-                    style: TextStyle(color: colorScheme.error),
-                  ),
-                ),
-              ),
-              SizedBox(width: 3.w),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _handleAcceptInvitation(taskId),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  IconButton(
+                    icon: CustomIconWidget(
+                      iconName: 'close',
+                      color: AppTheme.errorLight,
+                      size: 5.w,
                     ),
+                    onPressed: () => _handleRefuseInvitation(taskId),
+                    tooltip: 'Refuse',
                   ),
-                  child: const Text('Accept'),
-                ),
+                ],
               ),
             ],
           ),

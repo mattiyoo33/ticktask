@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -11,6 +9,7 @@ import './widgets/achievement_gallery_widget.dart';
 import './widgets/activity_history_widget.dart';
 import './widgets/profile_header_widget.dart';
 import './widgets/statistics_overview_widget.dart';
+import './widgets/avatar_selection_modal_widget.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -20,7 +19,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final ImagePicker _imagePicker = ImagePicker();
 
   Map<String, dynamic> get userData {
     final userProfileAsync = ref.watch(userProfileFromDbProvider);
@@ -74,7 +72,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       "id": userProfile?['id'] ?? currentUser?.id,
       "username": username,
       "email": email,
-      "avatar": userProfile?['avatar_url'] ?? "",
+      "avatar": userProfile?['avatar_url'] ?? "", // This will store avatar ID like "avatar_1"
+      "avatarId": userProfile?['avatar_url'] ?? "", // Store avatar ID separately
       "avatarDescription": "User profile picture",
       "level": level,
       "currentXP": userProfile?['current_xp'] as int? ?? 0,
@@ -211,147 +210,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _handleChangeAvatar() async {
     HapticFeedback.lightImpact();
 
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
       ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(6.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 12.w,
-              height: 1.h,
-              decoration: BoxDecoration(
-                color: colorScheme.outline.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(1.h),
-              ),
-            ),
-            SizedBox(height: 3.h),
-            Text(
-              'Change Profile Photo',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 3.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildAvatarOption(
-                  context,
-                  'Camera',
-                  'camera_alt',
-                  () => _pickImage(ImageSource.camera),
-                ),
-                _buildAvatarOption(
-                  context,
-                  'Gallery',
-                  'photo_library',
-                  () => _pickImage(ImageSource.gallery),
-                ),
-                _buildAvatarOption(
-                  context,
-                  'Remove',
-                  'delete',
-                  _removeAvatar,
-                ),
-              ],
-            ),
-            SizedBox(height: 4.h),
-          ],
-        ),
+      builder: (context) => AvatarSelectionModalWidget(
+        currentAvatarId: userData['avatarId'] as String?,
+        onAvatarSelected: (avatarId) async {
+          await _updateAvatar(avatarId);
+        },
       ),
     );
   }
 
-  Widget _buildAvatarOption(
-      BuildContext context, String title, String iconName, VoidCallback onTap) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-      child: Column(
-        children: [
-          Container(
-            width: 15.w,
-            height: 15.w,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: CustomIconWidget(
-                iconName: iconName,
-                color: colorScheme.primary,
-                size: 7.w,
-              ),
-            ),
-          ),
-          SizedBox(height: 1.h),
-          Text(
-            title,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      // Request camera permission if needed
-      if (source == ImageSource.camera) {
-        final permission = await Permission.camera.request();
-        if (!permission.isGranted) {
-          _showPermissionDeniedDialog('Camera');
-          return;
-        }
-      }
-
-      final XFile? image = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
-      );
-
-      if (image != null) {
-        // TODO: Upload image to Supabase Storage and get URL
-        // For now, we'll just show a success message
-        _showSuccessMessage('Profile photo updated successfully!');
-        
-        // Note: In production, you would:
-        // 1. Upload image to Supabase Storage
-        // 2. Get the public URL
-        // 3. Update user profile with: authService.updateProfile(avatarUrl: url)
-        // 4. The UI will automatically update via Riverpod
-      }
-    } catch (e) {
-      _showErrorMessage('Failed to update profile photo. Please try again.');
-    }
-  }
-
-  Future<void> _removeAvatar() async {
+  Future<void> _updateAvatar(String avatarId) async {
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.updateProfile(avatarUrl: '');
-      _showSuccessMessage('Profile photo removed successfully!');
+      
+      // Update avatar in database (stored as avatar_url)
+      await authService.updateProfileInDatabase(
+        avatarUrl: avatarId, // Store avatar ID in avatar_url field
+      );
+      
+      // Invalidate profile provider to refresh UI
+      ref.invalidate(userProfileFromDbProvider);
+      
+      if (mounted) {
+        _showSuccessMessage('Avatar updated successfully!');
+      }
     } catch (e) {
-      _showErrorMessage('Failed to remove profile photo. Please try again.');
+      if (mounted) {
+        _showErrorMessage('Failed to update avatar. Please try again.');
+      }
     }
   }
+
 
   void _handleEditProfile() {
     HapticFeedback.lightImpact();
@@ -388,7 +282,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     HapticFeedback.lightImpact();
 
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     showDialog(
       context: context,
@@ -475,7 +368,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showComingSoonDialog(String feature) {
-    final theme = Theme.of(context);
 
     showDialog(
       context: context,
@@ -501,46 +393,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPermissionDeniedDialog(String permission) {
-    final theme = Theme.of(context);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4.w),
-        ),
-        title: Row(
-          children: [
-            CustomIconWidget(
-              iconName: 'warning',
-              color: AppTheme.warningLight,
-              size: 6.w,
-            ),
-            SizedBox(width: 3.w),
-            const Text('Permission Required'),
-          ],
-        ),
-        content: Text(
-          '$permission permission is required to use this feature. Please enable it in your device settings.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              openAppSettings();
-            },
-            child: const Text('Settings'),
           ),
         ],
       ),

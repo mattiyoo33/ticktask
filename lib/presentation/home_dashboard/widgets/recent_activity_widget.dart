@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../utils/avatar_utils.dart';
 
 class RecentActivityWidget extends StatelessWidget {
   final List<Map<String, dynamic>> activities;
@@ -201,19 +202,17 @@ class RecentActivityWidget extends StatelessWidget {
                           height: 6.w,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
+                            color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                             border: Border.all(
                               color: colorScheme.outline.withValues(alpha: 0.2),
                               width: 1,
                             ),
                           ),
-                          child: ClipOval(
-                            child: CustomImageWidget(
-                              imageUrl: activity['userAvatar'] as String,
-                              width: 6.w,
-                              height: 6.w,
-                              fit: BoxFit.cover,
-                              semanticLabel:
-                                  "Profile avatar of ${activity['userName'] ?? 'user'}",
+                          child: Center(
+                            child: CustomIconWidget(
+                              iconName: AvatarUtils.getAvatarIcon(activity['userAvatar'] as String?),
+                              color: colorScheme.primary,
+                              size: 4.w,
                             ),
                           ),
                         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../utils/avatar_utils.dart';
 
 class LeaderboardItemWidget extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -22,8 +23,6 @@ class LeaderboardItemWidget extends StatelessWidget {
 
     final String name = user['name'] as String? ?? 'Unknown User';
     final String avatar = user['avatar'] as String? ?? '';
-    final String semanticLabel =
-        user['semanticLabel'] as String? ?? 'User profile picture';
     final int xp = user['xp'] as int? ?? 0;
     final int level = user['level'] as int? ?? 1;
     final List<dynamic> badges = user['badges'] as List<dynamic>? ?? [];
@@ -131,14 +130,11 @@ class LeaderboardItemWidget extends StatelessWidget {
                   width: isCurrentUser ? 2 : 1,
                 ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12.w / 2),
-                child: CustomImageWidget(
-                  imageUrl: avatar,
-                  width: 12.w,
-                  height: 12.w,
-                  fit: BoxFit.cover,
-                  semanticLabel: semanticLabel,
+              child: Center(
+                child: CustomIconWidget(
+                  iconName: AvatarUtils.getAvatarIcon(avatar),
+                  color: isCurrentUser ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                  size: 8.w,
                 ),
               ),
             ),

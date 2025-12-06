@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../utils/avatar_utils.dart';
 
 class GreetingHeaderWidget extends StatelessWidget {
   final String userName;
@@ -61,13 +62,11 @@ class GreetingHeaderWidget extends StatelessWidget {
                     width: 2,
                   ),
                 ),
-                child: ClipOval(
-                  child: CustomImageWidget(
-                    imageUrl: userAvatar,
-                    width: 15.w,
-                    height: 15.w,
-                    fit: BoxFit.cover,
-                    semanticLabel: "User profile avatar showing $userName",
+                child: Center(
+                  child: CustomIconWidget(
+                    iconName: AvatarUtils.getAvatarIcon(userAvatar),
+                    color: colorScheme.primary,
+                    size: 10.w,
                   ),
                 ),
               ),

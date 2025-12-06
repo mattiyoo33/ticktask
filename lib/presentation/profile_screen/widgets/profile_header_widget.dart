@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import 'avatar_selection_modal_widget.dart';
 
 class ProfileHeaderWidget extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -62,13 +63,13 @@ class ProfileHeaderWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: CustomImageWidget(
-                      imageUrl: userData["avatar"] as String,
-                      width: 25.w,
-                      height: 25.w,
-                      fit: BoxFit.cover,
-                      semanticLabel: userData["avatarDescription"] as String,
+                  child: Center(
+                    child: CustomIconWidget(
+                      iconName: AvatarSelectionModalWidget.getIconName(
+                        userData["avatar"] as String?,
+                      ),
+                      color: colorScheme.primary,
+                      size: 15.w,
                     ),
                   ),
                 ),

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../utils/avatar_utils.dart';
 
 class ParticipantsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> participants;
@@ -146,27 +147,12 @@ class ParticipantsWidget extends StatelessWidget {
                             width: 2,
                           ),
                         ),
-                        child: ClipOval(
-                          child: ownerAvatar.isNotEmpty
-                              ? CustomImageWidget(
-                                  imageUrl: ownerAvatar,
-                                  width: 10.w,
-                                  height: 10.w,
-                                  fit: BoxFit.cover,
-                                  semanticLabel: 'Task owner avatar',
-                                )
-                              : Container(
-                                  color: colorScheme.primary.withValues(alpha: 0.1),
-                                  child: Center(
-                                    child: Text(
-                                      ownerName.isNotEmpty ? ownerName[0].toUpperCase() : '?',
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                        child: Center(
+                          child: CustomIconWidget(
+                            iconName: AvatarUtils.getAvatarIcon(ownerAvatar),
+                            color: colorScheme.primary,
+                            size: 6.w,
+                          ),
                         ),
                       ),
                       SizedBox(width: 3.w),
@@ -212,51 +198,35 @@ class ParticipantsWidget extends StatelessWidget {
                 // Show other participants
                 final participantIndex = taskOwner != null ? index - 1 : index;
                 final participant = participants[participantIndex];
-              final name = participant['name'] as String? ?? 'Unknown';
-              final avatar = participant['avatar'] as String? ?? '';
-              final semanticLabel =
-                  participant['semanticLabel'] as String? ?? 'User avatar';
-              final isCompleted = participant['isCompleted'] as bool? ?? false;
-              final contribution = participant['contribution'] as int? ?? 0;
+                final name = participant['name'] as String? ?? 'Unknown';
+                final avatar = participant['avatar'] as String? ?? '';
+                final isCompleted = participant['isCompleted'] as bool? ?? false;
+                final contribution = participant['contribution'] as int? ?? 0;
 
-              return Row(
-                children: [
-                  // Avatar
-                  Container(
-                    width: 10.w,
-                    height: 10.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isCompleted
-                            ? Colors.green
-                            : colorScheme.outline.withValues(alpha: 0.3),
-                        width: 2,
+                return Row(
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 10.w,
+                      height: 10.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        border: Border.all(
+                          color: isCompleted
+                              ? Colors.green
+                              : colorScheme.outline.withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: CustomIconWidget(
+                          iconName: AvatarUtils.getAvatarIcon(avatar),
+                          color: colorScheme.primary,
+                          size: 6.w,
+                        ),
                       ),
                     ),
-                    child: ClipOval(
-                      child: avatar.isNotEmpty
-                          ? CustomImageWidget(
-                              imageUrl: avatar,
-                              width: 10.w,
-                              height: 10.w,
-                              fit: BoxFit.cover,
-                              semanticLabel: semanticLabel,
-                            )
-                          : Container(
-                              color: colorScheme.primary.withValues(alpha: 0.1),
-                              child: Center(
-                                child: Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
                   SizedBox(width: 3.w),
 
                   // Name and status

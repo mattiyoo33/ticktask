@@ -4,6 +4,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../utils/avatar_utils.dart';
 
 class FriendCardWidget extends StatelessWidget {
   final Map<String, dynamic> friend;
@@ -114,12 +115,12 @@ class FriendCardWidget extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(15.w / 2),
-                        child: CustomImageWidget(
-                          imageUrl: avatar,
-                          width: 15.w,
-                          height: 15.w,
-                          fit: BoxFit.cover,
-                          semanticLabel: semanticLabel,
+                        child: Center(
+                          child: CustomIconWidget(
+                            iconName: AvatarUtils.getAvatarIcon(avatar),
+                            color: colorScheme.primary,
+                            size: 10.w,
+                          ),
                         ),
                       ),
                     ),
