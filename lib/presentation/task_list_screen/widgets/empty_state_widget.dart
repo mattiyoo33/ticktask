@@ -8,7 +8,6 @@ class EmptyStateWidget extends StatelessWidget {
   final String subtitle;
   final String buttonText;
   final VoidCallback? onButtonPressed;
-  final String? mascotImageUrl;
 
   const EmptyStateWidget({
     super.key,
@@ -16,7 +15,6 @@ class EmptyStateWidget extends StatelessWidget {
     required this.subtitle,
     required this.buttonText,
     this.onButtonPressed,
-    this.mascotImageUrl,
   });
 
   @override
@@ -30,30 +28,21 @@ class EmptyStateWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Tasker Mascot
+            // Clean Icon
             Container(
-              width: 40.w,
-              height: 40.w,
+              width: 24.w,
+              height: 24.w,
               decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20.w),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12.w),
               ),
-              child: mascotImageUrl != null
-                  ? CustomImageWidget(
-                      imageUrl: mascotImageUrl!,
-                      width: 40.w,
-                      height: 40.w,
-                      fit: BoxFit.cover,
-                      semanticLabel:
-                          "Friendly Tasker mascot character encouraging user to create their first task",
-                    )
-                  : Center(
-                      child: CustomIconWidget(
-                        iconName: 'emoji_emotions',
-                        color: colorScheme.primary,
-                        size: 20.w,
-                      ),
-                    ),
+              child: Center(
+                child: CustomIconWidget(
+                  iconName: 'task',
+                  color: colorScheme.primary,
+                  size: 12.w,
+                ),
+              ),
             ),
 
             SizedBox(height: 4.h),

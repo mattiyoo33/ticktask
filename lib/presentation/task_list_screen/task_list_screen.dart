@@ -1080,8 +1080,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                           Navigator.pushNamed(context, '/task-creation-screen');
                           HapticFeedback.lightImpact();
                         },
-                        mascotImageUrl:
-                            'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
                       ),
                     ],
                   ],
