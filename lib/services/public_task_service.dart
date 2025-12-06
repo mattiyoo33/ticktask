@@ -38,7 +38,6 @@ class PublicTaskService {
           .select('''
             *,
             categories:category_id(*),
-            profiles:user_id(id, full_name, email, avatar_url),
             public_task_participants(count)
           ''')
           .eq('is_public', true);
@@ -63,8 +62,30 @@ class PublicTaskService {
 
       final response = await orderedQuery;
       final tasks = List<Map<String, dynamic>>.from(response);
-      debugPrint('✅ Fetched ${tasks.length} public tasks');
-      return tasks;
+      
+      // Fetch owner profiles separately (tasks.user_id references auth.users, not profiles directly)
+      final tasksWithProfiles = await Future.wait(tasks.map((task) async {
+        final userId = task['user_id'] as String?;
+        if (userId != null) {
+          try {
+            final profile = await _supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .eq('id', userId)
+                .maybeSingle();
+            task['profiles'] = profile;
+          } catch (e) {
+            debugPrint('⚠️ Error fetching profile for user $userId: $e');
+            task['profiles'] = null;
+          }
+        } else {
+          task['profiles'] = null;
+        }
+        return task;
+      }));
+      
+      debugPrint('✅ Fetched ${tasksWithProfiles.length} public tasks');
+      return tasksWithProfiles;
     } catch (e) {
       debugPrint('❌ Error fetching public tasks: $e');
       throw Exception('Failed to fetch public tasks: $e');
@@ -79,18 +100,60 @@ class PublicTaskService {
           .select('''
             *,
             categories:category_id(*),
-            profiles:user_id(id, full_name, email, avatar_url),
-            public_task_participants(
-              *,
-              profiles:user_id(id, full_name, email, avatar_url)
-            )
+            public_task_participants(*)
           ''')
           .eq('id', taskId)
           .eq('is_public', true)
-          .single();
+          .maybeSingle();
 
-      return response as Map<String, dynamic>?;
+      if (response == null) return null;
+      
+      final task = response;
+      
+      // Fetch owner profile separately
+      final userId = task['user_id'] as String?;
+      if (userId != null) {
+        try {
+          final profile = await _supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .eq('id', userId)
+              .maybeSingle();
+          task['profiles'] = profile;
+        } catch (e) {
+          debugPrint('⚠️ Error fetching owner profile: $e');
+          task['profiles'] = null;
+        }
+      }
+      
+      // Fetch participant profiles separately
+      final participants = task['public_task_participants'] as List?;
+      if (participants != null && participants.isNotEmpty) {
+        final participantsWithProfiles = await Future.wait(
+          participants.map((participant) async {
+            final participantUserId = participant['user_id'] as String?;
+            if (participantUserId != null) {
+              try {
+                final profile = await _supabase
+                    .from('profiles')
+                    .select('id, full_name, avatar_url')
+                    .eq('id', participantUserId)
+                    .maybeSingle();
+                participant['profiles'] = profile;
+              } catch (e) {
+                debugPrint('⚠️ Error fetching participant profile: $e');
+                participant['profiles'] = null;
+              }
+            }
+            return participant;
+          }),
+        );
+        task['public_task_participants'] = participantsWithProfiles;
+      }
+      
+      return task;
     } catch (e) {
+      debugPrint('❌ Error fetching public task by ID: $e');
       return null;
     }
   }
@@ -127,7 +190,7 @@ class PublicTaskService {
           .select()
           .single();
 
-      return response as Map<String, dynamic>;
+      return Map<String, dynamic>.from(response);
     } catch (e) {
       throw Exception('Failed to create public task: $e');
     }
@@ -216,16 +279,36 @@ class PublicTaskService {
     try {
       final response = await _supabase
           .from('public_task_participants')
-          .select('''
-            *,
-            profiles:user_id(id, full_name, email, avatar_url)
-          ''')
+          .select('*')
           .eq('task_id', taskId)
           .order('completed_count', ascending: false)
           .order('contribution', ascending: false)
           .order('joined_at', ascending: true);
 
-      return List<Map<String, dynamic>>.from(response);
+      final participants = List<Map<String, dynamic>>.from(response);
+      
+      // Fetch profiles separately
+      final participantsWithProfiles = await Future.wait(
+        participants.map((participant) async {
+          final participantUserId = participant['user_id'] as String?;
+          if (participantUserId != null) {
+            try {
+              final profile = await _supabase
+                  .from('profiles')
+                  .select('id, full_name, avatar_url')
+                  .eq('id', participantUserId)
+                  .maybeSingle();
+              participant['profiles'] = profile;
+            } catch (e) {
+              debugPrint('⚠️ Error fetching participant profile: $e');
+              participant['profiles'] = null;
+            }
+          }
+          return participant;
+        }),
+      );
+      
+      return participantsWithProfiles;
     } catch (e) {
       throw Exception('Failed to fetch participants: $e');
     }

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
@@ -19,9 +22,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   String? _selectedCategoryId;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  Map<String, dynamic>? _cachedFilters;
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -33,8 +39,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 
   void _handleSearch(String query) {
-    setState(() {
-      _searchQuery = query;
+    // Cancel previous debounce timer
+    _searchDebounce?.cancel();
+    
+    // Set up new debounce timer
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = query;
+        });
+      }
     });
   }
 
@@ -57,19 +71,35 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 
+  Map<String, dynamic> _getFilters() {
+    final currentFilters = {
+      'categoryId': _selectedCategoryId,
+      'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
+      'limit': 50,
+      'offset': 0,
+    };
+    
+    // Only update cached filters if values actually changed
+    if (_cachedFilters == null || 
+        _cachedFilters!['categoryId'] != currentFilters['categoryId'] ||
+        _cachedFilters!['searchQuery'] != currentFilters['searchQuery']) {
+      _cachedFilters = currentFilters;
+    }
+    
+    return _cachedFilters!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Get stable filter reference to prevent infinite refetches
+    final filters = _getFilters();
+    
     // Watch public tasks with filters
     final publicTasksAsync = ref.watch(
-      publicTasksProvider({
-        'categoryId': _selectedCategoryId,
-        'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
-        'limit': 50,
-        'offset': 0,
-      }),
+      publicTasksProvider(filters),
     );
 
     return Scaffold(
@@ -198,37 +228,49 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               loading: () => Center(
                 child: CircularProgressIndicator(),
               ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomIconWidget(
-                      iconName: 'error',
-                      color: colorScheme.error,
-                      size: 48,
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      'Failed to load tasks',
-                      style: theme.textTheme.titleMedium?.copyWith(
+              error: (error, stack) {
+                debugPrint('❌ Discover page error: $error');
+                debugPrint('Stack trace: $stack');
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomIconWidget(
+                        iconName: 'error',
                         color: colorScheme.error,
+                        size: 48,
                       ),
-                    ),
-                    SizedBox(height: 1.h),
-                    TextButton(
-                      onPressed: () {
-                        ref.invalidate(publicTasksProvider({
-                          'categoryId': _selectedCategoryId,
-                          'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
-                          'limit': 50,
-                          'offset': 0,
-                        }));
-                      },
-                      child: Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        'Failed to load tasks',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colorScheme.error,
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Text(
+                        error.toString(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 2.h),
+                      TextButton(
+                        onPressed: () {
+                          ref.invalidate(publicTasksProvider({
+                            'categoryId': _selectedCategoryId,
+                            'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
+                            'limit': 50,
+                            'offset': 0,
+                          }));
+                        },
+                        child: Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],

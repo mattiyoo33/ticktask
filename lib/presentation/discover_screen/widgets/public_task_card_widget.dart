@@ -29,9 +29,7 @@ class PublicTaskCardWidget extends StatelessWidget {
     final categoryName = category?['name'] as String? ?? 'Uncategorized';
     final categoryIcon = category?['icon'] as String? ?? 'category';
     final owner = task['profiles'] as Map<String, dynamic>?;
-    final ownerName = owner?['full_name'] as String? ?? 
-                     owner?['email']?.toString().split('@')[0] ?? 
-                     'Unknown';
+    final ownerName = owner?['full_name'] as String? ?? 'Unknown';
     final ownerAvatar = owner?['avatar_url'] as String? ?? '';
 
     return GestureDetector(

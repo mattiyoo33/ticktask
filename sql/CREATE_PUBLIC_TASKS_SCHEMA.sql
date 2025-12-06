@@ -21,8 +21,7 @@ INSERT INTO public.categories (name, icon, color) VALUES
   ('Health', 'favorite', '#F44336'),
   ('Education', 'school', '#3F51B5'),
   ('Travel', 'flight', '#00BCD4'),
-  ('Sports', 'sports', '#
-  4CAF50'),
+  ('Sports', 'sports', '#4CAF50'),
   ('Technology', 'computer', '#607D8B'),
   ('Art', 'palette', '#E91E63')
 ON CONFLICT (name) DO NOTHING;
@@ -61,28 +60,33 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.public_task_participants ENABLE ROW LEVEL SECURITY;
 
 -- 5. RLS Policies for categories (everyone can read)
+DROP POLICY IF EXISTS "Anyone can view categories" ON public.categories;
 CREATE POLICY "Anyone can view categories"
   ON public.categories FOR SELECT
   USING (true);
 
 -- 6. RLS Policies for public_task_participants
 -- Users can view all public task participants
+DROP POLICY IF EXISTS "Anyone can view public task participants" ON public.public_task_participants;
 CREATE POLICY "Anyone can view public task participants"
   ON public.public_task_participants FOR SELECT
   USING (true);
 
 -- Users can insert their own participant record
+DROP POLICY IF EXISTS "Users can join public tasks" ON public.public_task_participants;
 CREATE POLICY "Users can join public tasks"
   ON public.public_task_participants FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own participant record
+DROP POLICY IF EXISTS "Users can update their own public task participation" ON public.public_task_participants;
 CREATE POLICY "Users can update their own public task participation"
   ON public.public_task_participants FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can delete their own participant record (leave task)
+DROP POLICY IF EXISTS "Users can leave public tasks" ON public.public_task_participants;
 CREATE POLICY "Users can leave public tasks"
   ON public.public_task_participants FOR DELETE
   USING (auth.uid() = user_id);
@@ -100,6 +104,7 @@ CREATE POLICY "Anyone can view public tasks"
          ));
 
 -- 8. Function to update public_join_count
+DROP FUNCTION IF EXISTS update_public_task_join_count() CASCADE;
 CREATE OR REPLACE FUNCTION update_public_task_join_count()
 RETURNS TRIGGER AS $$
 BEGIN

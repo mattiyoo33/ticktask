@@ -160,11 +160,14 @@ final categoriesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
 // Public Tasks Provider
 final publicTasksProvider = FutureProvider.family<List<Map<String, dynamic>>, Map<String, dynamic>>((ref, filters) async {
   final publicTaskService = ref.watch(publicTaskServiceProvider);
-  return await publicTaskService.getPublicTasks(
+  final result = await publicTaskService.getPublicTasks(
     categoryId: filters['categoryId'] as String?,
     searchQuery: filters['searchQuery'] as String?,
     limit: filters['limit'] as int?,
     offset: filters['offset'] as int?,
   );
+  // Keep the provider alive to prevent unnecessary refetches
+  ref.keepAlive();
+  return result;
 });
 
