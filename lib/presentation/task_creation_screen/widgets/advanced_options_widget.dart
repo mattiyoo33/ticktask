@@ -10,11 +10,13 @@ class AdvancedOptionsWidget extends StatelessWidget {
   final TimeOfDay reminderTime;
   final bool collaborationEnabled;
   final String selectedCategory;
+  final List<String> selectedCollaboratorIds;
   final Function() onToggleExpanded;
   final Function(bool) onReminderToggled;
   final Function(TimeOfDay) onReminderTimeChanged;
   final Function(bool) onCollaborationToggled;
   final Function(String) onCategoryChanged;
+  final VoidCallback? onSelectCollaborators;
 
   const AdvancedOptionsWidget({
     super.key,
@@ -23,11 +25,13 @@ class AdvancedOptionsWidget extends StatelessWidget {
     required this.reminderTime,
     required this.collaborationEnabled,
     required this.selectedCategory,
+    this.selectedCollaboratorIds = const [],
     required this.onToggleExpanded,
     required this.onReminderToggled,
     required this.onReminderTimeChanged,
     required this.onCollaborationToggled,
     required this.onCategoryChanged,
+    this.onSelectCollaborators,
   });
 
   @override
@@ -76,9 +80,6 @@ class AdvancedOptionsWidget extends StatelessWidget {
   }
 
   Widget _buildExpandedContent(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Column(
       children: [
         // Reminder Settings
@@ -87,6 +88,10 @@ class AdvancedOptionsWidget extends StatelessWidget {
 
         // Collaboration Toggle
         _buildCollaborationSection(context),
+        if (collaborationEnabled && onSelectCollaborators != null) ...[
+          SizedBox(height: 2.h),
+          _buildSelectCollaboratorsButton(context),
+        ],
         SizedBox(height: 3.h),
 
         // Category Selection
@@ -170,7 +175,10 @@ class AdvancedOptionsWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
@@ -197,6 +205,64 @@ class AdvancedOptionsWidget extends StatelessWidget {
           onChanged: onCollaborationToggled,
         ),
       ],
+        ),
+        if (collaborationEnabled && selectedCollaboratorIds.isNotEmpty) ...[
+          SizedBox(height: 1.h),
+          Text(
+            '${selectedCollaboratorIds.length} friend${selectedCollaboratorIds.length > 1 ? 's' : ''} selected',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSelectCollaboratorsButton(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return GestureDetector(
+      onTap: onSelectCollaborators,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colorScheme.primary.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            CustomIconWidget(
+              iconName: 'group',
+              color: colorScheme.primary,
+              size: 20,
+            ),
+            SizedBox(width: 3.w),
+            Expanded(
+              child: Text(
+                selectedCollaboratorIds.isEmpty
+                    ? 'Select Collaborators'
+                    : '${selectedCollaboratorIds.length} Collaborator${selectedCollaboratorIds.length > 1 ? 's' : ''} Selected',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            CustomIconWidget(
+              iconName: 'keyboard_arrow_right',
+              color: colorScheme.primary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -70,10 +70,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           );
           Navigator.pop(context); // Go back to login
         } else {
-          // Auto-logged in, invalidate providers to ensure fresh data
+          // Auto-logged in, invalidate ALL providers to ensure fresh data
           ref.invalidate(userProfileFromDbProvider);
           ref.invalidate(currentUserProvider);
           ref.invalidate(userProfileProvider);
+          
+          // Invalidate all data providers to clear any cached data
+          ref.invalidate(friendsProvider);
+          ref.invalidate(incomingFriendRequestsProvider);
+          ref.invalidate(outgoingFriendRequestsProvider);
+          ref.invalidate(allTasksProvider);
+          ref.invalidate(todaysTasksProvider);
+          ref.invalidate(pendingCollaborationTasksProvider);
+          ref.invalidate(recentActivitiesProvider);
+          ref.invalidate(leaderboardProvider);
           
           // Go to dashboard
           Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);

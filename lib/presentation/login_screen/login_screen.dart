@@ -50,10 +50,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       if (response.user != null && mounted) {
-        // Invalidate providers to ensure fresh data for new user
+        // CRITICAL: Invalidate ALL providers to ensure fresh data for new user
+        // This prevents showing previous user's cached data
         ref.invalidate(userProfileFromDbProvider);
         ref.invalidate(currentUserProvider);
         ref.invalidate(userProfileProvider);
+        
+        // Invalidate all data providers to clear any cached data
+        ref.invalidate(friendsProvider);
+        ref.invalidate(incomingFriendRequestsProvider);
+        ref.invalidate(outgoingFriendRequestsProvider);
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(todaysTasksProvider);
+        ref.invalidate(pendingCollaborationTasksProvider);
+        ref.invalidate(recentActivitiesProvider);
+        ref.invalidate(leaderboardProvider);
         
         Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
       }

@@ -438,11 +438,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final authService = ref.read(authServiceProvider);
       await authService.signOut();
       
-      // Invalidate all user-related providers to clear cached data
+      // CRITICAL: Invalidate ALL providers to prevent data leakage between accounts
+      // User profile providers
       ref.invalidate(userProfileFromDbProvider);
       ref.invalidate(currentUserProvider);
       ref.invalidate(userProfileProvider);
       ref.invalidate(isAuthenticatedProvider);
+      
+      // Data providers - must be invalidated to clear cached data
+      ref.invalidate(friendsProvider);
+      ref.invalidate(incomingFriendRequestsProvider);
+      ref.invalidate(outgoingFriendRequestsProvider);
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      ref.invalidate(pendingCollaborationTasksProvider);
+      ref.invalidate(recentActivitiesProvider);
+      ref.invalidate(leaderboardProvider);
+      
+      // Service providers (optional, but ensures fresh instances)
+      ref.invalidate(taskServiceProvider);
+      ref.invalidate(friendServiceProvider);
+      ref.invalidate(activityServiceProvider);
       
       // Navigate directly to login screen and clear navigation stack
       if (mounted) {

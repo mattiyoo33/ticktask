@@ -149,7 +149,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   List<Map<String, dynamic>> _transformParticipants(List<Map<String, dynamic>> participants) {
-    return participants.map((p) {
+    final currentUserAsync = ref.read(currentUserProvider);
+    final currentUserId = currentUserAsync.value?.id;
+    
+    // CRITICAL: Filter out current user from participants list
+    // The current user (task owner) should not appear as a participant
+    final filteredParticipants = participants.where((p) {
+      final participantUserId = p['user_id'] as String?;
+      return participantUserId != null && participantUserId != currentUserId;
+    }).toList();
+    
+    return filteredParticipants.map((p) {
       final profile = p['profiles'] as Map<String, dynamic>?;
       return {
         'id': p['user_id'],

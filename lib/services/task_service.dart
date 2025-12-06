@@ -97,9 +97,10 @@ class TaskService {
 
         if (participantCheck != null) {
           // User is a participant, fetch the task
+          // The RLS policy "Users can view collaborative tasks" should allow this
           response = await _supabase
               .from('tasks')
-              .select()
+              .select('*')
               .eq('id', taskId)
               .maybeSingle();
         }
@@ -125,6 +126,7 @@ class TaskService {
     int? recurrenceInterval,
     DateTime? nextOccurrence,
     bool isCollaborative = false,
+    List<String> participantIds = const [],
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -151,6 +153,57 @@ class TaskService {
           .insert(taskData)
           .select()
           .single();
+
+      // Add participants with pending status if provided
+      if (participantIds.isNotEmpty) {
+        // CRITICAL: Filter out current user from participants
+        // The task owner should never be added as a participant
+        final validParticipantIds = participantIds
+            .where((userId) => userId != _userId)
+            .toList();
+        
+        if (validParticipantIds.isEmpty) {
+          print('No valid participants after filtering out current user');
+          return response;
+        }
+        
+        // Ensure task is marked as collaborative (required for RLS policy to work)
+        if (!isCollaborative) {
+          await _supabase
+              .from('tasks')
+              .update({'is_collaborative': true})
+              .eq('id', response['id']);
+          print('Updated task to be collaborative');
+        }
+        
+        // Try to insert with status field first (if migration was run)
+        try {
+          final participants = validParticipantIds.map((userId) {
+            return <String, dynamic>{
+              'task_id': response['id'],
+              'user_id': userId,
+              'role': 'participant',
+              'status': 'pending',
+            };
+          }).toList();
+
+          await _supabase.from('task_participants').insert(participants);
+          print('Inserted ${participants.length} participants with pending status');
+        } catch (e) {
+          // If status column doesn't exist, insert without it
+          print('Error inserting with status, trying without: $e');
+          final participants = validParticipantIds.map((userId) {
+            return <String, dynamic>{
+              'task_id': response['id'],
+              'user_id': userId,
+              'role': 'participant',
+            };
+          }).toList();
+
+          await _supabase.from('task_participants').insert(participants);
+          print('Inserted ${participants.length} participants without status');
+        }
+      }
 
       return response;
     } catch (e) {
@@ -375,6 +428,10 @@ class TaskService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
+      // First get the task to find the owner
+      final task = await getTaskById(taskId);
+      final taskOwnerId = task?['user_id'] as String?;
+      
       final response = await _supabase
           .from('task_participants')
           .select('''
@@ -387,7 +444,17 @@ class TaskService {
           ''')
           .eq('task_id', taskId);
 
-      return List<Map<String, dynamic>>.from(response);
+      // CRITICAL: Filter out the task owner from participants list
+      // The owner is not a participant, they're the owner
+      final participants = List<Map<String, dynamic>>.from(response)
+          .where((participant) {
+            final participantUserId = participant['user_id'] as String?;
+            // Exclude task owner from participants list
+            return participantUserId != null && participantUserId != taskOwnerId;
+          })
+          .toList();
+
+      return participants;
     } catch (e) {
       rethrow;
     }
@@ -492,6 +559,222 @@ class TaskService {
           .eq('user_id', friendId);
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Accept collaboration invitation
+  Future<void> acceptCollaborationInvitation(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      await _supabase
+          .from('task_participants')
+          .update({'status': 'accepted'})
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .eq('status', 'pending');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Refuse collaboration invitation
+  Future<void> refuseCollaborationInvitation(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      await _supabase
+          .from('task_participants')
+          .update({'status': 'refused'})
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .eq('status', 'pending');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get tasks where user has pending collaboration invitations
+  Future<List<Map<String, dynamic>>> getPendingCollaborationTasks() async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      print('Fetching pending collaboration tasks for user: $_userId');
+      
+      // First get the task IDs where user has pending invitations
+      // CRITICAL: RLS policy "Users can view task participants" must allow this query
+      List<Map<String, dynamic>> participantsResponse;
+      try {
+        // Try querying with status field
+        print('🔍 Querying task_participants for user: $_userId with status=pending');
+        final queryResponse = await _supabase
+            .from('task_participants')
+            .select('task_id, status, user_id')
+            .eq('user_id', _userId!)
+            .eq('status', 'pending');
+        
+        participantsResponse = List<Map<String, dynamic>>.from(queryResponse);
+        print('✅ Query succeeded: Found ${participantsResponse.length} pending participants with status field');
+        
+        // Debug: Print all participants found
+        if (participantsResponse.isNotEmpty) {
+          print('📋 Participant details: ${participantsResponse.map((p) => 'task_id: ${p['task_id']}, status: ${p['status']}').toList()}');
+        }
+      } catch (e) {
+        print('❌ Status column query failed: $e');
+        print('💡 This might be: 1) RLS policy blocking, 2) Status column missing, 3) Query error');
+        
+        // Try without status filter to see if RLS is the issue
+        try {
+          print('🔄 Trying query without status filter to test RLS...');
+          final fallbackResponse = await _supabase
+              .from('task_participants')
+              .select('task_id, user_id, status')
+              .eq('user_id', _userId!);
+          
+          final allParticipants = List<Map<String, dynamic>>.from(fallbackResponse);
+          print('📊 Found ${allParticipants.length} total participants for user (without status filter)');
+          
+          if (allParticipants.isNotEmpty) {
+            print('📋 All participants: ${allParticipants.map((p) => 'task_id: ${p['task_id']}, status: ${p['status'] ?? "NULL"}').toList()}');
+            // Filter to pending manually
+            participantsResponse = allParticipants.where((p) {
+              final status = p['status'];
+              return status == null || status == 'pending';
+            }).toList();
+            print('✅ Filtered to ${participantsResponse.length} pending participants');
+          } else {
+            participantsResponse = [];
+            print('⚠️ No participants found at all - RLS might be blocking or user has no participants');
+          }
+        } catch (e2) {
+          print('❌ Fallback query also failed: $e2');
+          print('💡 This strongly suggests RLS policy issue - run FIX_TASK_PARTICIPANTS_RLS_VIEW.sql');
+          participantsResponse = [];
+        }
+      }
+
+      if (participantsResponse.isEmpty) {
+        print('⚠️ No pending participants found for user: $_userId');
+        print('💡 Check: 1) SQL migration ADD_PARTICIPANT_STATUS.sql was run, 2) Participants were created, 3) Status is set to "pending"');
+        return [];
+      }
+
+      final taskIds = participantsResponse
+          .map((p) => p['task_id'] as String)
+          .toList();
+      
+      print('✅ Found ${taskIds.length} pending invitations');
+      print('📋 Fetching tasks with IDs: $taskIds');
+
+      // Now fetch the tasks with owner profile information
+      // We need to get tasks that the user is invited to (not owned by them)
+      // Since RLS might block, we'll use a different approach - get all tasks and filter
+      final List<Map<String, dynamic>> tasks = [];
+      
+      for (final taskId in taskIds) {
+        try {
+          // Try direct query first (bypasses getTaskById which might have RLS issues)
+          // Since we know the user is a participant, RLS should allow this
+          print('🔍 Attempting to fetch task $taskId directly...');
+          
+          Map<String, dynamic>? task;
+          
+          // Method 1: Try direct query with RLS policy
+          try {
+            final directResponse = await _supabase
+                .from('tasks')
+                .select('*')
+                .eq('id', taskId)
+                .eq('is_collaborative', true)
+                .maybeSingle();
+            
+            if (directResponse != null) {
+              task = Map<String, dynamic>.from(directResponse);
+              print('✅ Direct query succeeded for task $taskId');
+            }
+          } catch (e) {
+            print('⚠️ Direct query failed: $e');
+          }
+          
+          // Method 2: Fallback to getTaskById if direct query failed
+          if (task == null) {
+            print('🔄 Trying getTaskById as fallback...');
+            task = await getTaskById(taskId);
+            if (task != null) {
+              print('✅ getTaskById succeeded for task $taskId');
+            }
+          }
+          
+          if (task == null) {
+            print('❌ Could not fetch task $taskId - RLS might be blocking or task does not exist');
+            print('💡 Check: 1) RLS policy "Users can view collaborative tasks" exists, 2) Task is marked as collaborative, 3) User is in task_participants');
+            continue;
+          }
+          
+          final taskOwnerId = task['user_id'] as String?;
+          final isCollaborative = task['is_collaborative'] as bool? ?? false;
+          print('📋 Task details - owner: $taskOwnerId, is_collaborative: $isCollaborative, current user: $_userId');
+          
+          // Only include tasks not owned by current user (they're invitations)
+          if (taskOwnerId != null && taskOwnerId != _userId!) {
+            print('✅ Task $taskId is an invitation (owner: $taskOwnerId, current user: $_userId)');
+            
+            // Fetch owner profile separately
+            try {
+              final profileResponse = await _supabase
+                  .from('profiles')
+                  .select('id, full_name, avatar_url')
+                  .eq('id', taskOwnerId)
+                  .maybeSingle();
+              
+              if (profileResponse != null) {
+                task['profiles'] = profileResponse;
+                print('✅ Fetched owner profile: ${profileResponse['full_name']}');
+              } else {
+                print('⚠️ Owner profile not found for user: $taskOwnerId');
+                // Fallback if profile doesn't exist
+                task['profiles'] = {
+                  'id': taskOwnerId,
+                  'full_name': null,
+                  'avatar_url': null,
+                };
+              }
+            } catch (e) {
+              print('❌ Error fetching profile for user $taskOwnerId: $e');
+              // Add empty profile as fallback
+              task['profiles'] = {
+                'id': taskOwnerId,
+                'full_name': null,
+                'avatar_url': null,
+              };
+            }
+            
+            tasks.add(task);
+            print('✅ Added task to invitations list: ${task['title']}');
+          } else {
+            print('⚠️ Skipping task $taskId: owned by current user (owner: $taskOwnerId, current: $_userId)');
+          }
+        } catch (e) {
+          print('❌ Error fetching task $taskId: $e');
+          print('📚 Error details: ${e.toString()}');
+          print('📚 Stack trace: ${StackTrace.current}');
+          // Continue with next task
+        }
+      }
+      
+      print('📊 Final result: Found ${tasks.length} pending collaboration tasks after filtering');
+      if (tasks.isNotEmpty) {
+        print('📝 Task titles: ${tasks.map((t) => t['title']).toList()}');
+      }
+      
+      return tasks;
+    } catch (e) {
+      // Log error for debugging
+      print('Error fetching pending collaboration tasks: $e');
+      print('Stack trace: ${StackTrace.current}');
+      // Return empty list instead of throwing to prevent UI errors
+      return [];
     }
   }
 

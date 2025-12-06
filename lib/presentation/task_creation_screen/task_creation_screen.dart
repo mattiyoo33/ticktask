@@ -9,6 +9,7 @@ import './widgets/difficulty_selection_widget.dart';
 import './widgets/quick_templates_widget.dart';
 import './widgets/recurring_task_widget.dart';
 import './widgets/ai_task_generator_widget.dart';
+import './widgets/select_collaborators_modal_widget.dart';
 
 class TaskCreationScreen extends ConsumerStatefulWidget {
   const TaskCreationScreen({super.key});
@@ -37,6 +38,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
   bool _collaborationEnabled = false;
   String _selectedCategory = 'Personal';
+  List<String> _selectedCollaboratorIds = []; // Selected friend IDs for collaboration
 
   // UI state
   bool _isLoading = false;
@@ -171,6 +173,23 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
     });
   }
 
+  void _handleSelectCollaborators() async {
+    final selectedIds = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectCollaboratorsModalWidget(
+        selectedFriendIds: _selectedCollaboratorIds,
+      ),
+    );
+
+    if (selectedIds != null && mounted) {
+      setState(() {
+        _selectedCollaboratorIds = selectedIds;
+      });
+    }
+  }
+
   Future<void> _saveTask() async {
     if (!_isFormValid) return;
 
@@ -236,6 +255,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         recurrenceInterval: 1,
         nextOccurrence: nextOccurrence,
         isCollaborative: _collaborationEnabled,
+        participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
       );
 
       // Refresh providers to show new task
@@ -636,6 +656,9 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                   onCollaborationToggled: (value) {
                     setState(() {
                       _collaborationEnabled = value;
+                      if (!value) {
+                        _selectedCollaboratorIds.clear();
+                      }
                     });
                   },
                   onCategoryChanged: (category) {
@@ -643,6 +666,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                       _selectedCategory = category;
                     });
                   },
+                  selectedCollaboratorIds: _selectedCollaboratorIds,
+                  onSelectCollaborators: _collaborationEnabled ? _handleSelectCollaborators : null,
                 ),
                 SizedBox(height: 6.h),
 

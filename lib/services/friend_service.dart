@@ -32,6 +32,12 @@ class FriendService {
             ? friendship['user_id']
             : friendship['friend_id'];
         
+        // CRITICAL: Skip if friendId is the current user (shouldn't happen, but safety check)
+        if (friendId == _userId) {
+          print('Warning: Found self as friend, skipping. Friendship ID: ${friendship['id']}');
+          continue;
+        }
+        
         // Get friend profile
         final friendProfile = await _supabase
             .from('profiles')

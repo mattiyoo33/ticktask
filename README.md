@@ -24,22 +24,38 @@ flutter run
 ## 📁 Project Structure
 
 ```
-flutter_app/
+ticktask/
 ├── android/            # Android-specific configuration
 ├── ios/                # iOS-specific configuration
 ├── lib/
 │   ├── core/           # Core utilities and services
-│   │   └── utils/      # Utility classes
 │   ├── presentation/   # UI screens and widgets
-│   │   └── splash_screen/ # Splash screen implementation
+│   ├── providers/      # Riverpod state management
 │   ├── routes/         # Application routing
+│   ├── services/       # Business logic services
 │   ├── theme/          # Theme configuration
 │   ├── widgets/        # Reusable UI components
 │   └── main.dart       # Application entry point
+├── docs/               # Documentation
+│   ├── database/       # SQL schema and migrations
+│   ├── setup/          # Setup and installation guides
+│   ├── features/       # Feature documentation
+│   └── fixes/          # Bug fixes and troubleshooting
 ├── assets/             # Static assets (images, fonts, etc.)
+├── env.json            # Environment configuration (API keys, etc.)
 ├── pubspec.yaml        # Project dependencies and configuration
 └── README.md           # Project documentation
 ```
+
+## 📚 Documentation
+
+All documentation has been organized in the `docs/` directory:
+
+- **[Documentation Index](docs/README.md)** - Complete documentation overview
+- **[Database Schema](docs/database/)** - SQL files and migrations
+- **[Setup Guides](docs/setup/)** - Installation and configuration
+- **[Features](docs/features/)** - Feature documentation
+- **[Bug Fixes](docs/fixes/)** - Troubleshooting guides
 
 ## 🧩 Adding Routes
 

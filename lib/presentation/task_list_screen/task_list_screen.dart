@@ -71,6 +71,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
+    
+    // Refresh pending invitations when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(pendingCollaborationTasksProvider);
+      print('🔄 Refreshed pendingCollaborationTasksProvider on screen load');
+    });
   }
 
   @override
@@ -115,7 +121,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
             filtered.where((task) => task['difficulty'] == 'Hard').toList();
         break;
       case TaskFilter.all:
-      default:
         break;
     }
 
@@ -221,9 +226,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     setState(() => _isRefreshing = true);
     HapticFeedback.mediumImpact();
 
-    // Refresh all providers
+    // Refresh all providers including pending invitations
     ref.invalidate(allTasksProvider);
     ref.invalidate(todaysTasksProvider);
+    ref.invalidate(pendingCollaborationTasksProvider);
     ref.invalidate(recentActivitiesProvider);
     await Future.delayed(const Duration(milliseconds: 1500));
 
@@ -286,12 +292,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                 ref.invalidate(allTasksProvider);
                 ref.invalidate(todaysTasksProvider);
                 
-                Fluttertoast.showToast(
-                  msg: "Task deleted",
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                );
-                HapticFeedback.heavyImpact();
+              Fluttertoast.showToast(
+                msg: "Task deleted",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+              );
+              HapticFeedback.heavyImpact();
               } catch (e) {
                 Fluttertoast.showToast(
                   msg: "Error deleting task: ${e.toString()}",
@@ -321,6 +327,364 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
 
   void _handleTaskTap(Map<String, dynamic> task) {
     Navigator.pushNamed(context, '/task-detail-screen', arguments: task);
+  }
+
+  bool get _hasPendingInvitations {
+    final pendingTasksAsync = ref.watch(pendingCollaborationTasksProvider);
+    return pendingTasksAsync.when(
+      data: (tasks) => tasks.isNotEmpty,
+      loading: () => false,
+      error: (_, __) => false,
+    );
+  }
+
+  Widget _buildPendingInvitationsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final pendingTasksAsync = ref.watch(pendingCollaborationTasksProvider);
+
+    return pendingTasksAsync.when(
+      data: (pendingTasks) {
+        // Debug: Print pending tasks with more details
+        print('📊 UI: Pending tasks count: ${pendingTasks.length}');
+        if (pendingTasks.isNotEmpty) {
+          print('📋 UI: Pending task titles: ${pendingTasks.map((t) => t['title']).toList()}');
+          print('📋 UI: Pending task IDs: ${pendingTasks.map((t) => t['id']).toList()}');
+        } else {
+          print('⚠️ UI: No pending tasks to display');
+          print('💡 Check console logs above for fetch details');
+        }
+        
+        if (pendingTasks.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+          padding: EdgeInsets.all(4.w),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colorScheme.primary.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CustomIconWidget(
+                    iconName: 'group',
+                    color: colorScheme.primary,
+                    size: 24,
+                  ),
+                  SizedBox(width: 2.w),
+                  Text(
+                    'Collaboration Invitations',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 2.h),
+              ...pendingTasks.map((task) => _buildPendingInvitationItem(context, task)),
+            ],
+          ),
+        );
+      },
+      loading: () => Container(
+        margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+        padding: EdgeInsets.all(4.w),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 3.w),
+            Text(
+              'Loading invitations...',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+      error: (error, stack) {
+        print('❌ Error loading pending invitations: $error');
+        print('📚 Stack trace: $stack');
+        // Show error state for debugging with more details
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+          padding: EdgeInsets.all(4.w),
+          decoration: BoxDecoration(
+            color: colorScheme.errorContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: colorScheme.error.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                  SizedBox(width: 2.w),
+                  Expanded(
+                    child: Text(
+                      'Error loading invitations',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 1.h),
+              Text(
+                'Check console logs for details. Common issues:\n'
+                '• RLS policy missing (run FIX_COLLABORATIVE_TASKS_RLS.sql)\n'
+                '• Status column missing (run ADD_PARTICIPANT_STATUS.sql)\n'
+                '• User not authenticated',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error.withValues(alpha: 0.8),
+                ),
+              ),
+              SizedBox(height: 1.h),
+              Text(
+                error.toString(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPendingInvitationItem(BuildContext context, Map<String, dynamic> task) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final taskId = task['id'] as String? ?? '';
+    final title = task['title'] as String? ?? 'Untitled Task';
+    final description = task['description'] as String? ?? '';
+    
+    // Handle profiles - could be Map or List
+    Map<String, dynamic>? owner;
+    if (task['profiles'] != null) {
+      if (task['profiles'] is List && (task['profiles'] as List).isNotEmpty) {
+        owner = (task['profiles'] as List)[0] as Map<String, dynamic>?;
+      } else if (task['profiles'] is Map) {
+        owner = task['profiles'] as Map<String, dynamic>?;
+      }
+    }
+    
+    final ownerName = owner?['full_name'] as String? ?? 
+                      owner?['email']?.toString().split('@')[0] ?? 
+                      'Unknown User';
+    final ownerAvatar = owner?['avatar_url'] as String? ?? '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 2.h),
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (ownerAvatar.isNotEmpty)
+                Container(
+                  width: 10.w,
+                  height: 10.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: DecorationImage(
+                      image: NetworkImage(ownerAvatar),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 10.w,
+                  height: 10.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                  ),
+                  child: Center(
+                    child: Text(
+                      ownerName.isNotEmpty ? ownerName[0].toUpperCase() : '?',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              SizedBox(width: 3.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ownerName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      'invited you to collaborate',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          if (description.isNotEmpty) ...[
+            SizedBox(height: 1.h),
+            Text(
+              description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          SizedBox(height: 2.h),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _handleRefuseInvitation(taskId),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: colorScheme.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Refuse',
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                ),
+              ),
+              SizedBox(width: 3.w),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _handleAcceptInvitation(taskId),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Accept'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleAcceptInvitation(String taskId) async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      await taskService.acceptCollaborationInvitation(taskId);
+      
+      // Refresh providers
+      ref.invalidate(pendingCollaborationTasksProvider);
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      
+      // Force rebuild
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Collaboration invitation accepted!'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error accepting invitation: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleRefuseInvitation(String taskId) async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      await taskService.refuseCollaborationInvitation(taskId);
+      
+      // Refresh providers
+      ref.invalidate(pendingCollaborationTasksProvider);
+      
+      // Force rebuild
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Collaboration invitation refused'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error refusing invitation: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   void _handleTaskSelectionChanged(String taskId, bool isSelected) {
@@ -386,9 +750,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       ref.invalidate(userProfileFromDbProvider);
       
       setState(() {
-        _selectedTaskIds.clear();
-        _isMultiSelectMode = false;
-      });
+      _selectedTaskIds.clear();
+      _isMultiSelectMode = false;
+    });
 
       String message;
       if (tasksCompletedLate > 0 && tasksCompletedOnTime > 0) {
@@ -397,10 +761,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         message = "${selectedTasks.length} tasks completed late - no XP awarded";
       } else {
         message = "${selectedTasks.length} tasks completed! +$totalXpAwarded XP earned 🎉";
-        _confettiController.forward().then((_) {
-          _confettiController.reset();
-        });
-      }
+    _confettiController.forward().then((_) {
+      _confettiController.reset();
+    });
+  }
 
       Fluttertoast.showToast(
         msg: message,
@@ -427,16 +791,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       ref.invalidate(allTasksProvider);
       ref.invalidate(todaysTasksProvider);
       
-      setState(() {
-        _selectedTaskIds.clear();
-        _isMultiSelectMode = false;
-      });
+    setState(() {
+      _selectedTaskIds.clear();
+      _isMultiSelectMode = false;
+    });
 
-      Fluttertoast.showToast(
-        msg: "Selected tasks deleted",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+    Fluttertoast.showToast(
+      msg: "Selected tasks deleted",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
     } catch (e) {
       Fluttertoast.showToast(
         msg: "Error deleting tasks: ${e.toString()}",
@@ -528,6 +892,20 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: Column(
                         children: [
+                          // Pending Collaboration Invitations
+                          _buildPendingInvitationsSection(context),
+                          
+                          // Divider between invitations and tasks
+                          if (_hasPendingInvitations) ...[
+                            Divider(
+                              height: 4.h,
+                              thickness: 2,
+                              color: colorScheme.outline.withValues(alpha: 0.2),
+                              indent: 4.w,
+                              endIndent: 4.w,
+                            ),
+                          ],
+                          
                           // Overdue Tasks
                           TaskSectionWidget(
                             title: 'Overdue',
