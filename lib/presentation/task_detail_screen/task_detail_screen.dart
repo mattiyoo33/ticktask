@@ -43,6 +43,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   List<Map<String, dynamic>> _comments = [];
   String? _taskId;
   RealtimeChannel? _commentsChannel;
+  bool _isOwner = false; // Whether current user is the task owner
+  bool _isParticipant = false; // Whether current user is a participant
 
   @override
   void didChangeDependencies() {
@@ -108,11 +110,23 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       // Fetch streak data
       final streak = await taskService.getTaskStreak(_taskId!);
 
-      // Fetch task owner profile
+      // Fetch task owner profile and determine user role
       Map<String, dynamic>? taskOwner;
+      bool isOwner = false;
+      bool isParticipant = false;
+      
       final taskOwnerId = task['user_id'] as String?;
+      final currentUserAsync = ref.read(currentUserProvider);
+      final currentUserId = currentUserAsync.value?.id;
+      
       if (taskOwnerId != null) {
         try {
+          // Check if current user is the owner
+          if (currentUserId != null) {
+            isOwner = taskOwnerId == currentUserId;
+          }
+          
+          // Fetch owner profile
           final supabase = SupabaseService.client;
           final ownerProfile = await supabase
               .from('profiles')
@@ -136,17 +150,25 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       // Check if current user is a participant (not the owner)
       Map<String, dynamic>? currentUserParticipant;
-      final currentUserAsync = ref.read(currentUserProvider);
-      final currentUserId = currentUserAsync.value?.id;
       
       // If current user is not the owner, check if they're a participant
-      if (currentUserId != null && currentUserId != taskOwnerId) {
-        final currentUserInParticipants = participants.firstWhere(
-          (p) => p['user_id'] == currentUserId,
-          orElse: () => <String, dynamic>{},
-        );
+      if (currentUserId != null && !isOwner && task['is_collaborative'] == true) {
+        // Check if user is an accepted participant
+        try {
+          final supabase = SupabaseService.client;
+          final participantCheck = await supabase
+              .from('task_participants')
+              .select('id')
+              .eq('task_id', _taskId!)
+              .eq('user_id', currentUserId)
+              .eq('status', 'accepted')
+              .maybeSingle();
+          isParticipant = participantCheck != null;
+        } catch (e) {
+          debugPrint('Error checking participant status: $e');
+        }
         
-        if (currentUserInParticipants.isNotEmpty) {
+        if (isParticipant) {
           // Fetch current user's profile
           try {
             final supabase = SupabaseService.client;
@@ -185,6 +207,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _taskData = task;
         _streakData = streak;
         _taskOwner = taskOwner;
+        _isOwner = isOwner;
+        _isParticipant = isParticipant;
         _participants = _transformParticipants(participants, currentUserParticipant: currentUserParticipant);
         _comments = _transformComments(comments);
         _isInitialLoading = false;
@@ -337,15 +361,27 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             ),
             Divider(
                 height: 1, color: colorScheme.outline.withValues(alpha: 0.2)),
-            _buildOptionTile(
-              icon: 'delete',
-              title: 'Delete Task',
-              onTap: () {
-                Navigator.pop(context);
-                _deleteTask();
-              },
-              isDestructive: true,
-            ),
+            // Show "Leave Task" for participants, "Delete Task" for owners
+            if (_isParticipant && !_isOwner)
+              _buildOptionTile(
+                icon: 'exit',
+                title: 'Leave Task',
+                onTap: () {
+                  Navigator.pop(context);
+                  _leaveTask();
+                },
+                isDestructive: true,
+              ),
+            if (_isOwner)
+              _buildOptionTile(
+                icon: 'delete',
+                title: 'Delete Task',
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteTask();
+                },
+                isDestructive: true,
+              ),
             SizedBox(height: 2.h),
           ],
         ),
@@ -434,6 +470,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 // Refresh task lists
                 ref.invalidate(allTasksProvider);
                 ref.invalidate(todaysTasksProvider);
+                ref.invalidate(pendingCollaborationTasksProvider);
                 
                 if (mounted) {
                   Navigator.pop(context); // Go back to previous screen
@@ -456,6 +493,79 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _leaveTask() async {
+    if (_taskId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Task'),
+        content: const Text(
+            'Are you sure you want to leave this collaborative task? If you are the last participant, the task will become an individual task.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close confirmation dialog
+              try {
+                final taskService = ref.read(taskServiceProvider);
+                await taskService.leaveTask(_taskId!);
+                
+                debugPrint('✅ Successfully left task $_taskId');
+                
+                // Invalidate providers to trigger refresh
+                ref.invalidate(allTasksProvider);
+                ref.invalidate(todaysTasksProvider);
+                ref.invalidate(pendingCollaborationTasksProvider);
+                
+                // Wait for providers to actually refresh by reading them
+                // This ensures the data is fetched before we navigate back
+                try {
+                  debugPrint('🔄 Waiting for allTasksProvider to refresh...');
+                  await ref.read(allTasksProvider.future);
+                  debugPrint('✅ allTasksProvider refreshed');
+                } catch (e) {
+                  debugPrint('⚠️ Error refreshing allTasksProvider: $e');
+                }
+                
+                // Small delay to ensure UI updates
+                await Future.delayed(const Duration(milliseconds: 300));
+                
+                if (mounted) {
+                  Navigator.pop(context); // Go back to task list screen
+                  
+                  // Show success message after navigation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Left task successfully. Task removed from your list.'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('❌ Error leaving task: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error leaving task: ${e.toString()}'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Leave', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

@@ -389,17 +389,91 @@ class TaskService {
     }
   }
 
-  // Delete a task
+  // Delete a task (only allowed for task owner)
   Future<void> deleteTask(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
+      // Verify user is the task owner
+      final task = await getTaskById(taskId);
+      if (task == null) throw Exception('Task not found');
+      
+      final taskOwnerId = task['user_id'] as String?;
+      if (taskOwnerId != _userId) {
+        throw Exception('Only the task owner can delete this task');
+      }
+      
       await _supabase
           .from('tasks')
           .delete()
           .eq('id', taskId)
           .eq('user_id', _userId!);
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Leave a collaborative task (for participants only)
+  // If all participants leave, the task becomes an individual task
+  Future<void> leaveTask(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      print('🔄 Leaving task $taskId, user $_userId');
+      
+      // Verify user is a participant (not the owner)
+      final task = await getTaskById(taskId);
+      if (task == null) throw Exception('Task not found');
+      
+      final taskOwnerId = task['user_id'] as String?;
+      if (taskOwnerId == _userId) {
+        throw Exception('Task owner cannot leave their own task. Use delete instead.');
+      }
+      
+      // Check if user is a participant
+      final participantCheck = await _supabase
+          .from('task_participants')
+          .select('*')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+      
+      if (participantCheck == null) {
+        throw Exception('You are not a participant in this task');
+      }
+      
+      print('📋 Found participant record, removing...');
+      
+      // Remove the participant
+      await _supabase
+          .from('task_participants')
+          .delete()
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!);
+      
+      print('✅ Participant removed');
+      
+      // Check if there are any remaining participants
+      final remainingParticipants = await _supabase
+          .from('task_participants')
+          .select('id')
+          .eq('task_id', taskId)
+          .eq('status', 'accepted');
+      
+      final remainingCount = (remainingParticipants as List).length;
+      print('📊 Remaining participants: $remainingCount');
+      
+      // If no participants remain, convert task to individual
+      if (remainingCount == 0) {
+        print('🔄 No participants remaining, converting task to individual...');
+        await _supabase
+            .from('tasks')
+            .update({'is_collaborative': false})
+            .eq('id', taskId);
+        print('✅ Task converted to individual task');
+      }
+    } catch (e) {
+      print('❌ Error leaving task: $e');
       rethrow;
     }
   }
