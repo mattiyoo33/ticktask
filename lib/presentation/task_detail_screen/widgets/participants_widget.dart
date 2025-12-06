@@ -1,3 +1,11 @@
+/// Participants Widget
+/// 
+/// This widget displays the list of participants assigned to a collaborative task. It shows each
+/// participant's profile picture (or initials if no picture is available), name, and completion status.
+/// The widget includes a "Select Friends" button that opens a modal for adding or removing friends
+/// from the task. It handles both empty states (when no participants exist yet) and populated states
+/// (showing all assigned participants). The widget is conditionally displayed based on whether the
+/// task is collaborative, has participants, or allows friend selection.
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
@@ -6,11 +14,13 @@ import '../../../core/app_export.dart';
 class ParticipantsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> participants;
   final bool isCollaborative;
+  final VoidCallback? onSelectFriends;
 
   const ParticipantsWidget({
     super.key,
     required this.participants,
     this.isCollaborative = false,
+    this.onSelectFriends,
   });
 
   @override
@@ -18,8 +28,9 @@ class ParticipantsWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    if (!isCollaborative || participants.isEmpty) {
-      return SizedBox.shrink();
+    // Show widget if collaborative, has participants, or can select friends
+    if (!isCollaborative && participants.isEmpty && onSelectFriends == null) {
+      return const SizedBox.shrink();
     }
 
     return Container(
@@ -48,22 +59,72 @@ class ParticipantsWidget extends StatelessWidget {
                 size: 20,
               ),
               SizedBox(width: 2.w),
-              Text(
-                'Participants (${participants.length})',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  'Participants (${participants.length})',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
               ),
+              if (onSelectFriends != null)
+                TextButton.icon(
+                  onPressed: onSelectFriends,
+                  icon: CustomIconWidget(
+                    iconName: 'add',
+                    color: colorScheme.primary,
+                    size: 18,
+                  ),
+                  label: Text(
+                    'Select Friends',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
             ],
           ),
           SizedBox(height: 2.h),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: participants.length,
-            separatorBuilder: (context, index) => SizedBox(height: 2.h),
-            itemBuilder: (context, index) {
+          if (participants.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 2.h),
+              child: Center(
+                child: Column(
+                  children: [
+                    CustomIconWidget(
+                      iconName: 'group',
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      size: 32,
+                    ),
+                    SizedBox(height: 1.h),
+                    Text(
+                      'No participants yet',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (onSelectFriends != null) ...[
+                      SizedBox(height: 0.5.h),
+                      Text(
+                        'Add friends to collaborate',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: participants.length,
+              separatorBuilder: (context, index) => SizedBox(height: 2.h),
+              itemBuilder: (context, index) {
               final participant = participants[index];
               final name = participant['name'] as String? ?? 'Unknown';
               final avatar = participant['avatar'] as String? ?? '';

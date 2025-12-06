@@ -6,12 +6,14 @@ class CommentsSectionWidget extends StatefulWidget {
   final List<Map<String, dynamic>> comments;
   final Function(String) onAddComment;
   final bool isCollaborative;
+  final bool hasParticipants;
 
   const CommentsSectionWidget({
     super.key,
     required this.comments,
     required this.onAddComment,
     this.isCollaborative = false,
+    this.hasParticipants = false,
   });
 
   @override
@@ -43,7 +45,8 @@ class _CommentsSectionWidgetState extends State<CommentsSectionWidget> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    if (!widget.isCollaborative) {
+    // Show comments if task is collaborative or has participants
+    if (!widget.isCollaborative && !widget.hasParticipants) {
       return const SizedBox.shrink();
     }
 
@@ -198,6 +201,15 @@ class _CommentsSectionWidgetState extends State<CommentsSectionWidget> {
     );
   }
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
   Widget _buildCommentItem(Map<String, dynamic> comment) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -207,30 +219,47 @@ class _CommentsSectionWidgetState extends State<CommentsSectionWidget> {
     final timestamp = comment['timestamp'] as DateTime? ?? DateTime.now();
 
     final timeAgo = _getTimeAgo(timestamp);
+    final initials = _getInitials(author);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Avatar
+        // Avatar with profile picture or initials
         Container(
           width: 10.w,
           height: 10.w,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: colorScheme.primary.withValues(alpha: 0.1),
+            border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 0.2),
+              width: 1,
+            ),
           ),
-          child: avatar.isNotEmpty
+          child: avatar.isNotEmpty && avatar.trim().isNotEmpty
               ? ClipOval(
                   child: CustomImageWidget(
                     imageUrl: avatar,
                     height: 10.w,
                     width: 10.w,
                     fit: BoxFit.cover,
+                    errorWidget: Container(
+                      color: colorScheme.primary.withValues(alpha: 0.1),
+                      child: Center(
+                        child: Text(
+                          initials,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 )
               : Center(
                   child: Text(
-                    author.isNotEmpty ? author[0].toUpperCase() : '?',
+                    initials,
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.w600,

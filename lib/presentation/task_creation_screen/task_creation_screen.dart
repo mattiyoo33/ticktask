@@ -256,7 +256,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                 SizedBox(width: 2.w),
                 Expanded(
                   child: Text(
-                    'Task created successfully! +$xpReward XP',
+                    'Task created successfully!',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w500,

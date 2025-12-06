@@ -1,12 +1,24 @@
+/// Task Detail Screen
+/// 
+/// This screen displays comprehensive details for a single task, including its title, description,
+/// due date, difficulty, XP reward, and completion status. It provides functionality for task
+/// management such as marking tasks as complete/incomplete, editing task details, and deleting tasks.
+/// The screen also supports collaborative features including friend selection for task assignment,
+/// real-time comments from assigned participants, and participant management. It integrates with
+/// Supabase Realtime to provide live comment updates and displays celebration animations when
+/// tasks are completed on time with XP rewards.
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
+import '../../services/supabase_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import './widgets/action_button_widget.dart';
 import './widgets/celebration_overlay_widget.dart';
 import './widgets/comments_section_widget.dart';
 import './widgets/participants_widget.dart';
+import './widgets/select_friends_modal_widget.dart';
 import './widgets/streak_progress_widget.dart';
 import './widgets/task_header_widget.dart';
 import './widgets/task_info_widget.dart';
@@ -29,6 +41,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   List<Map<String, dynamic>> _participants = [];
   List<Map<String, dynamic>> _comments = [];
   String? _taskId;
+  RealtimeChannel? _commentsChannel;
 
   @override
   void didChangeDependencies() {
@@ -38,6 +51,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _loadTaskData();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _commentsChannel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> _loadTaskData() async {
@@ -88,16 +107,23 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       // Fetch streak data
       final streak = await taskService.getTaskStreak(_taskId!);
 
-      // Fetch participants (only if collaborative)
+      // Fetch participants (always fetch to show added friends)
       List<Map<String, dynamic>> participants = [];
-      if (task['is_collaborative'] == true) {
+      try {
         participants = await taskService.getTaskParticipants(_taskId!);
+      } catch (e) {
+        // If no participants or error, continue with empty list
+        debugPrint('Error loading participants: $e');
       }
 
-      // Fetch comments (only if collaborative)
+      // Fetch comments (if collaborative or has participants)
       List<Map<String, dynamic>> comments = [];
-      if (task['is_collaborative'] == true) {
-        comments = await taskService.getTaskComments(_taskId!);
+      if (task['is_collaborative'] == true || participants.isNotEmpty) {
+        try {
+          comments = await taskService.getTaskComments(_taskId!);
+        } catch (e) {
+          debugPrint('Error loading comments: $e');
+        }
       }
 
       setState(() {
@@ -107,6 +133,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _comments = _transformComments(comments);
         _isInitialLoading = false;
       });
+
+      // Set up real-time comments subscription
+      _setupRealtimeComments();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -366,10 +395,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
     try {
       final taskService = ref.read(taskServiceProvider);
-      await taskService.completeTask(_taskId!);
+      final completionResult = await taskService.completeTask(_taskId!);
       
-      final xpReward = _taskData!['xp_reward'] as int? ?? 0;
-      final streakBonus = _streakData?['has_streak_bonus'] == true ? 25 : 0;
+      final xpAwarded = completionResult['xp_awarded'] as bool? ?? false;
+      final xpGained = completionResult['xp_gained'] as int? ?? 0;
+      final streakBonus = _streakData?['has_streak_bonus'] == true && xpAwarded ? 25 : 0;
       
       // Refresh task data
       await _loadTaskData();
@@ -380,9 +410,27 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       setState(() {
         _isLoading = false;
-        _xpGained = xpReward + streakBonus;
-        _showCelebration = true;
+        _xpGained = xpGained + streakBonus;
+        _showCelebration = xpAwarded; // Only show celebration if XP was awarded
       });
+
+      if (mounted) {
+        if (xpAwarded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Task completed! +${xpGained + streakBonus} XP earned 🎉'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task completed, but no XP awarded (completed after deadline)'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -484,18 +532,86 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     }
   }
 
+  void _setupRealtimeComments() {
+    if (_taskId == null) return;
+
+    // Unsubscribe from previous channel if exists
+    _commentsChannel?.unsubscribe();
+
+    // Subscribe to real-time comments
+    _commentsChannel = SupabaseService.client
+        .channel('task_comments_$_taskId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'task_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: _taskId,
+          ),
+          callback: (payload) {
+            // Reload comments when a new one is added
+            _loadComments();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'task_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: _taskId,
+          ),
+          callback: (payload) {
+            _loadComments();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'task_comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: _taskId,
+          ),
+          callback: (payload) {
+            _loadComments();
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _loadComments() async {
+    if (_taskId == null) return;
+
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      final comments = await taskService.getTaskComments(_taskId!);
+      
+      if (mounted) {
+        setState(() {
+          _comments = _transformComments(comments);
+        });
+      }
+    } catch (e) {
+      // Silently fail for real-time updates
+      debugPrint('Error loading comments: $e');
+    }
+  }
+
   void _handleAddComment(String comment) async {
     if (_taskId == null) return;
 
     try {
       final taskService = ref.read(taskServiceProvider);
-      final newComment = await taskService.addComment(_taskId!, comment);
+      await taskService.addComment(_taskId!, comment);
       
-      // Transform and add to comments list
-      final transformedComment = _transformComments([newComment]).first;
-      setState(() {
-        _comments.insert(0, transformedComment);
-      });
+      // Real-time subscription will update the UI automatically
+      // But we can also manually refresh for immediate feedback
+      await _loadComments();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -515,6 +631,29 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         );
       }
     }
+  }
+
+  void _handleSelectFriends() {
+    if (_taskId == null) return;
+
+    final currentParticipantIds = _participants
+        .map((p) => p['id'] as String?)
+        .where((id) => id != null)
+        .cast<String>()
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectFriendsModalWidget(
+        taskId: _taskId!,
+        currentParticipantIds: currentParticipantIds,
+      ),
+    ).then((_) {
+      // Reload task data after friend selection
+      _loadTaskData();
+    });
   }
 
   void _onCelebrationComplete() {
@@ -605,10 +744,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     hasStreakBonus: hasStreakBonus,
                   ),
 
-                // Participants (for collaborative tasks)
+                // Participants (always show if has participants or can add friends)
                 ParticipantsWidget(
                   participants: _participants,
-                  isCollaborative: _taskData!['is_collaborative'] == true,
+                  isCollaborative: _taskData!['is_collaborative'] == true || _participants.isNotEmpty,
+                  onSelectFriends: _handleSelectFriends,
                 ),
 
                 // Comments Section
@@ -616,6 +756,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   comments: _comments,
                   onAddComment: _handleAddComment,
                   isCollaborative: _taskData!['is_collaborative'] == true,
+                  hasParticipants: _participants.isNotEmpty,
                 ),
 
                 SizedBox(height: 2.h),
