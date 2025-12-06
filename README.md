@@ -36,26 +36,18 @@ ticktask/
 │   ├── theme/          # Theme configuration
 │   ├── widgets/        # Reusable UI components
 │   └── main.dart       # Application entry point
-├── docs/               # Documentation
-│   ├── database/       # SQL schema and migrations
-│   ├── setup/          # Setup and installation guides
-│   ├── features/       # Feature documentation
-│   └── fixes/          # Bug fixes and troubleshooting
+├── sql/                # SQL schema and migration files
 ├── assets/             # Static assets (images, fonts, etc.)
 ├── env.json            # Environment configuration (API keys, etc.)
 ├── pubspec.yaml        # Project dependencies and configuration
+├── COLLABORATION_FIX.md # Fix guide for collaboration invitations
 └── README.md           # Project documentation
 ```
 
 ## 📚 Documentation
 
-All documentation has been organized in the `docs/` directory:
-
-- **[Documentation Index](docs/README.md)** - Complete documentation overview
-- **[Database Schema](docs/database/)** - SQL files and migrations
-- **[Setup Guides](docs/setup/)** - Installation and configuration
-- **[Features](docs/features/)** - Feature documentation
-- **[Bug Fixes](docs/fixes/)** - Troubleshooting guides
+- **[SQL Files](sql/README.md)** - Database schema and migration files
+- **[Collaboration Fix](COLLABORATION_FIX.md)** - Fix for collaboration invitations not showing
 
 ## 🧩 Adding Routes
 
