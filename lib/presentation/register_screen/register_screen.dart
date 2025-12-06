@@ -70,7 +70,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           );
           Navigator.pop(context); // Go back to login
         } else {
-          // Auto-logged in, go to dashboard
+          // Auto-logged in, invalidate providers to ensure fresh data
+          ref.invalidate(userProfileFromDbProvider);
+          ref.invalidate(currentUserProvider);
+          ref.invalidate(userProfileProvider);
+          
+          // Go to dashboard
           Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
         }
       }

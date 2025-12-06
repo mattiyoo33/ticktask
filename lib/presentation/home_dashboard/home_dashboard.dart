@@ -26,7 +26,8 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
   Map<String, dynamic> get _userData {
     final userProfileAsync = ref.watch(userProfileFromDbProvider);
     final userProfile = userProfileAsync.value;
-    final currentUser = ref.watch(currentUserProvider);
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final currentUser = currentUserAsync.value;
     
     if (userProfile == null && currentUser == null) {
       // Fallback if no user data

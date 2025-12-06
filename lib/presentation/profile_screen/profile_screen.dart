@@ -25,7 +25,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic> get userData {
     final userProfileAsync = ref.watch(userProfileFromDbProvider);
     final userProfile = userProfileAsync.value;
-    final currentUser = ref.watch(currentUserProvider);
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final currentUser = currentUserAsync.value;
     
     if (userProfile == null && currentUser == null) {
       // Fallback if no user data
@@ -436,6 +437,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       final authService = ref.read(authServiceProvider);
       await authService.signOut();
+      
+      // Invalidate all user-related providers to clear cached data
+      ref.invalidate(userProfileFromDbProvider);
+      ref.invalidate(currentUserProvider);
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(isAuthenticatedProvider);
       
       // Navigate directly to login screen and clear navigation stack
       if (mounted) {

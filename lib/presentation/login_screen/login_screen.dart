@@ -18,6 +18,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Clear form fields when screen is shown (e.g., after sign out)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _emailController.clear();
+      _passwordController.clear();
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -40,6 +50,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       if (response.user != null && mounted) {
+        // Invalidate providers to ensure fresh data for new user
+        ref.invalidate(userProfileFromDbProvider);
+        ref.invalidate(currentUserProvider);
+        ref.invalidate(userProfileProvider);
+        
         Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
       }
     } catch (e) {

@@ -11,7 +11,14 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
   return authService.authStateChanges;
 });
 
-final currentUserProvider = Provider<User?>((ref) {
+// Watch auth state changes to automatically update current user
+final currentUserProvider = StreamProvider<User?>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return authService.authStateChanges.map((authState) => authState.session?.user);
+});
+
+// Synchronous current user (for immediate access)
+final currentUserSyncProvider = Provider<User?>((ref) {
   final authService = ref.watch(authServiceProvider);
   return authService.currentUser;
 });
@@ -28,7 +35,17 @@ final userProfileProvider = Provider<Map<String, dynamic>?>((ref) {
 });
 
 // Full profile from database (async - fetches from profiles table)
+// This will automatically invalidate when auth state changes
 final userProfileFromDbProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  // Watch auth state to invalidate when user changes
+  final authStateAsync = ref.watch(authStateProvider);
+  final authState = authStateAsync.value;
+  
+  // If no user, return null
+  if (authState?.session?.user == null) {
+    return null;
+  }
+  
   final authService = ref.watch(authServiceProvider);
   return await authService.fetchUserProfile();
 });
