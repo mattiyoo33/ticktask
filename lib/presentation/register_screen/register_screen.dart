@@ -83,7 +83,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ref.invalidate(todaysTasksProvider);
           ref.invalidate(pendingCollaborationTasksProvider);
           ref.invalidate(recentActivitiesProvider);
-          ref.invalidate(leaderboardProvider);
           
           // Go to dashboard
           Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);

@@ -279,9 +279,9 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           difficulty: _selectedDifficulty.toLowerCase(),
         );
 
-        // Refresh public tasks provider - invalidate the family provider
-        // This will refresh all instances of the provider
-        ref.invalidate(publicTasksProvider);
+        // Refresh public tasks provider - invalidate all possible filter combinations
+        // Since we can't invalidate all family instances, we'll let them refresh naturally
+        // The provider will refetch when the discover page is opened
       } else {
         // Create private task
         await taskService.createTask(

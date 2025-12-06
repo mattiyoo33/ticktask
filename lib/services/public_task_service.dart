@@ -37,8 +37,7 @@ class PublicTaskService {
           .from('tasks')
           .select('''
             *,
-            categories:category_id(*),
-            public_task_participants(count)
+            categories:category_id(*)
           ''')
           .eq('is_public', true);
 
@@ -63,9 +62,12 @@ class PublicTaskService {
       final response = await orderedQuery;
       final tasks = List<Map<String, dynamic>>.from(response);
       
-      // Fetch owner profiles separately (tasks.user_id references auth.users, not profiles directly)
+      // Fetch owner profiles and actual participant counts separately
       final tasksWithProfiles = await Future.wait(tasks.map((task) async {
         final userId = task['user_id'] as String?;
+        final taskId = task['id'] as String?;
+        
+        // Fetch owner profile
         if (userId != null) {
           try {
             final profile = await _supabase
@@ -81,6 +83,22 @@ class PublicTaskService {
         } else {
           task['profiles'] = null;
         }
+        
+        // Fetch actual participant count
+        if (taskId != null) {
+          try {
+            final participantResponse = await _supabase
+                .from('public_task_participants')
+                .select('id')
+                .eq('task_id', taskId);
+            task['public_join_count'] = (participantResponse as List).length;
+            debugPrint('📊 Task $taskId: ${task['public_join_count']} participants');
+          } catch (e) {
+            debugPrint('⚠️ Error fetching participant count for task $taskId: $e');
+            task['public_join_count'] = task['public_join_count'] ?? 0;
+          }
+        }
+        
         return task;
       }));
       
@@ -277,6 +295,7 @@ class PublicTaskService {
   // Get public task participants with leaderboard data
   Future<List<Map<String, dynamic>>> getPublicTaskParticipants(String taskId) async {
     try {
+      debugPrint('🔍 Fetching participants for task: $taskId');
       final response = await _supabase
           .from('public_task_participants')
           .select('*')
@@ -286,6 +305,7 @@ class PublicTaskService {
           .order('joined_at', ascending: true);
 
       final participants = List<Map<String, dynamic>>.from(response);
+      debugPrint('📊 Found ${participants.length} participants in database');
       
       // Fetch profiles separately
       final participantsWithProfiles = await Future.wait(
@@ -300,7 +320,7 @@ class PublicTaskService {
                   .maybeSingle();
               participant['profiles'] = profile;
             } catch (e) {
-              debugPrint('⚠️ Error fetching participant profile: $e');
+              debugPrint('⚠️ Error fetching participant profile for $participantUserId: $e');
               participant['profiles'] = null;
             }
           }
@@ -308,8 +328,10 @@ class PublicTaskService {
         }),
       );
       
+      debugPrint('✅ Returning ${participantsWithProfiles.length} participants with profiles');
       return participantsWithProfiles;
     } catch (e) {
+      debugPrint('❌ Error fetching participants: $e');
       throw Exception('Failed to fetch participants: $e');
     }
   }

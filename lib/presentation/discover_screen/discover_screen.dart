@@ -23,7 +23,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
-  Map<String, dynamic>? _cachedFilters;
 
   @override
   void dispose() {
@@ -33,9 +32,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 
   void _handleCategoryFilter(String? categoryId) {
-    setState(() {
-      _selectedCategoryId = categoryId;
-    });
+    if (_selectedCategoryId != categoryId) {
+      setState(() {
+        _selectedCategoryId = categoryId;
+      });
+    }
   }
 
   void _handleSearch(String query) {
@@ -44,7 +45,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     
     // Set up new debounce timer
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-      if (mounted) {
+      if (mounted && _searchQuery != query) {
         setState(() {
           _searchQuery = query;
         });
@@ -71,31 +72,18 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 
-  Map<String, dynamic> _getFilters() {
-    final currentFilters = {
-      'categoryId': _selectedCategoryId,
-      'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
-      'limit': 50,
-      'offset': 0,
-    };
-    
-    // Only update cached filters if values actually changed
-    if (_cachedFilters == null || 
-        _cachedFilters!['categoryId'] != currentFilters['categoryId'] ||
-        _cachedFilters!['searchQuery'] != currentFilters['searchQuery']) {
-      _cachedFilters = currentFilters;
-    }
-    
-    return _cachedFilters!;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Get stable filter reference to prevent infinite refetches
-    final filters = _getFilters();
+    // Create filter object - using a class with proper equality
+    final filters = PublicTaskFilters(
+      categoryId: _selectedCategoryId,
+      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+      limit: 50,
+      offset: 0,
+    );
     
     // Watch public tasks with filters
     final publicTasksAsync = ref.watch(
@@ -199,12 +187,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
                 return RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(publicTasksProvider({
-                      'categoryId': _selectedCategoryId,
-                      'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
-                      'limit': 50,
-                      'offset': 0,
-                    }));
+                    ref.invalidate(publicTasksProvider(PublicTaskFilters(
+                      categoryId: _selectedCategoryId,
+                      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+                      limit: 50,
+                      offset: 0,
+                    )));
                   },
                   child: ListView.builder(
                     padding: EdgeInsets.all(4.w),
@@ -258,12 +246,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                       SizedBox(height: 2.h),
                       TextButton(
                         onPressed: () {
-                          ref.invalidate(publicTasksProvider({
-                            'categoryId': _selectedCategoryId,
-                            'searchQuery': _searchQuery.isEmpty ? null : _searchQuery,
-                            'limit': 50,
-                            'offset': 0,
-                          }));
+                          ref.invalidate(publicTasksProvider(PublicTaskFilters(
+                            categoryId: _selectedCategoryId,
+                            searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+                            limit: 50,
+                            offset: 0,
+                          )));
                         },
                         child: Text('Retry'),
                       ),

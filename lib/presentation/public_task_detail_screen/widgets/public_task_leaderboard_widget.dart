@@ -21,18 +21,39 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final currentUser = ref.watch(currentUserProvider).value;
 
-    // Fetch participants
+    // Fetch participants using shared provider
     final participantsFuture = ref.watch(
-      FutureProvider((ref) async {
-        final publicTaskService = ref.read(publicTaskServiceProvider);
-        return await publicTaskService.getPublicTaskParticipants(taskId);
-      }),
+      publicTaskParticipantsProvider(taskId),
     );
 
     return participantsFuture.when(
       data: (participants) {
         if (participants.isEmpty) {
-          return SizedBox.shrink();
+          return Container(
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                CustomIconWidget(
+                  iconName: 'emoji_events',
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  size: 24,
+                ),
+                SizedBox(width: 3.w),
+                Expanded(
+                  child: Text(
+                    'No participants yet - leaderboard will appear when people join',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         // Sort by completed_count and contribution

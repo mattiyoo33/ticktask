@@ -281,8 +281,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _handleLogout() {
     HapticFeedback.lightImpact();
 
-    final theme = Theme.of(context);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -346,7 +344,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ref.invalidate(todaysTasksProvider);
       ref.invalidate(pendingCollaborationTasksProvider);
       ref.invalidate(recentActivitiesProvider);
-      ref.invalidate(leaderboardProvider);
       
       // Service providers (optional, but ensures fresh instances)
       ref.invalidate(taskServiceProvider);

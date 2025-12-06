@@ -157,17 +157,54 @@ final categoriesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
   return await publicTaskService.getCategories();
 });
 
-// Public Tasks Provider
-final publicTasksProvider = FutureProvider.family<List<Map<String, dynamic>>, Map<String, dynamic>>((ref, filters) async {
+// Public Tasks Provider - using a custom filter class for stable equality
+class PublicTaskFilters {
+  final String? categoryId;
+  final String? searchQuery;
+  final int limit;
+  final int offset;
+
+  const PublicTaskFilters({
+    this.categoryId,
+    this.searchQuery,
+    this.limit = 50,
+    this.offset = 0,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PublicTaskFilters &&
+          runtimeType == other.runtimeType &&
+          categoryId == other.categoryId &&
+          searchQuery == other.searchQuery &&
+          limit == other.limit &&
+          offset == other.offset;
+
+  @override
+  int get hashCode =>
+      categoryId.hashCode ^
+      searchQuery.hashCode ^
+      limit.hashCode ^
+      offset.hashCode;
+}
+
+final publicTasksProvider = FutureProvider.family<List<Map<String, dynamic>>, PublicTaskFilters>((ref, filters) async {
   final publicTaskService = ref.watch(publicTaskServiceProvider);
   final result = await publicTaskService.getPublicTasks(
-    categoryId: filters['categoryId'] as String?,
-    searchQuery: filters['searchQuery'] as String?,
-    limit: filters['limit'] as int?,
-    offset: filters['offset'] as int?,
+    categoryId: filters.categoryId,
+    searchQuery: filters.searchQuery,
+    limit: filters.limit,
+    offset: filters.offset,
   );
   // Keep the provider alive to prevent unnecessary refetches
   ref.keepAlive();
   return result;
+});
+
+// Public Task Participants Provider - shared provider for participants
+final publicTaskParticipantsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, taskId) async {
+  final publicTaskService = ref.watch(publicTaskServiceProvider);
+  return await publicTaskService.getPublicTaskParticipants(taskId);
 });
 

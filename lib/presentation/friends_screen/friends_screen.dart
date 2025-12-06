@@ -10,7 +10,6 @@ import './widgets/add_friends_modal_widget.dart';
 import './widgets/empty_state_widget.dart';
 import './widgets/friend_card_widget.dart';
 import './widgets/friends_request_card_widget.dart' show FriendRequestCardWidget;
-import './widgets/leaderboard_item_widget.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -93,21 +92,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     }
   }
 
-  // Get leaderboard from database
-  List<Map<String, dynamic>> get _leaderboard {
-    final leaderboardAsync = ref.watch(leaderboardProvider);
-    return leaderboardAsync.when(
-      data: (leaderboard) => leaderboard,
-      loading: () => [],
-      error: (_, __) => [],
-    );
-  }
 
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -231,7 +221,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
             tabs: const [
               CustomTab(text: 'Friends'),
               CustomTab(text: 'Requests'),
-              CustomTab(text: 'Leaderboard'),
             ],
             controller: _tabController,
             variant: CustomTabBarVariant.underline,
@@ -243,7 +232,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
               children: [
                 _buildFriendsTab(),
                 _buildRequestsTab(),
-                _buildLeaderboardTab(),
               ],
             ),
           ),
@@ -364,72 +352,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     );
   }
 
-  Widget _buildLeaderboardTab() {
-    return Column(
-      children: [
-        // Weekly reset info
-        Container(
-          margin: EdgeInsets.all(4.w),
-          padding: EdgeInsets.all(4.w),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              CustomIconWidget(
-                iconName: 'emoji_events',
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-              SizedBox(width: 3.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Weekly Leaderboard',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                    Text(
-                      'Resets every Monday • 3 days left',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Leaderboard list
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.only(bottom: 2.h),
-            itemCount: _leaderboard.length,
-            itemBuilder: (context, index) {
-              final user = _leaderboard[index];
-              return LeaderboardItemWidget(
-                user: user,
-                rank: index + 1,
-                isCurrentUser: user['isCurrentUser'] as bool? ?? false,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
 
   Future<void> _acceptFriendRequest(Map<String, dynamic> request) async {
     HapticFeedback.lightImpact();

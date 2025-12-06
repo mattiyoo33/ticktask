@@ -45,6 +45,17 @@ class _PublicTaskDetailScreenState extends ConsumerState<PublicTaskDetailScreen>
       final task = await publicTaskService.getPublicTaskById(_taskId!);
       final hasJoined = await publicTaskService.hasJoinedPublicTask(_taskId!);
       
+      // Get actual participant count
+      try {
+        final participants = await publicTaskService.getPublicTaskParticipants(_taskId!);
+        if (task != null) {
+          task['public_join_count'] = participants.length;
+          debugPrint('📊 Updated participant count: ${participants.length}');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error fetching participants for count: $e');
+      }
+      
       // Load comments
       List<Map<String, dynamic>> comments = [];
       try {
@@ -66,6 +77,7 @@ class _PublicTaskDetailScreenState extends ConsumerState<PublicTaskDetailScreen>
         });
       }
     } catch (e) {
+      debugPrint('❌ Error loading task details: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +125,13 @@ class _PublicTaskDetailScreenState extends ConsumerState<PublicTaskDetailScreen>
       final publicTaskService = ref.read(publicTaskServiceProvider);
       await publicTaskService.joinPublicTask(_taskId!);
       
+      // Invalidate providers to refresh data
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(publicTasksProvider);
+      
+      // Wait a bit for the database trigger to update public_join_count
+      await Future.delayed(Duration(milliseconds: 500));
+      
       if (mounted) {
         setState(() => _hasJoined = true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,6 +173,10 @@ class _PublicTaskDetailScreenState extends ConsumerState<PublicTaskDetailScreen>
       try {
         final publicTaskService = ref.read(publicTaskServiceProvider);
         await publicTaskService.leavePublicTask(_taskId!);
+        
+        // Invalidate providers to refresh data
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(publicTasksProvider);
         
         if (mounted) {
           setState(() => _hasJoined = false);

@@ -20,12 +20,9 @@ class PublicParticipantsWidget extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Fetch participants
+    // Fetch participants using shared provider
     final participantsFuture = ref.watch(
-      FutureProvider((ref) async {
-        final publicTaskService = ref.read(publicTaskServiceProvider);
-        return await publicTaskService.getPublicTaskParticipants(taskId);
-      }),
+      publicTaskParticipantsProvider(taskId),
     );
 
     return participantsFuture.when(

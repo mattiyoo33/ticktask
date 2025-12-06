@@ -64,7 +64,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ref.invalidate(todaysTasksProvider);
         ref.invalidate(pendingCollaborationTasksProvider);
         ref.invalidate(recentActivitiesProvider);
-        ref.invalidate(leaderboardProvider);
         
         Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
       }
