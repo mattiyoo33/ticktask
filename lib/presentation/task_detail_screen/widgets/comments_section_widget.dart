@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
+import '../../../utils/avatar_utils.dart';
 
 class CommentsSectionWidget extends StatefulWidget {
   final List<Map<String, dynamic>> comments;
@@ -201,15 +202,6 @@ class _CommentsSectionWidgetState extends State<CommentsSectionWidget> {
     );
   }
 
-  String _getInitials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
-
   Widget _buildCommentItem(Map<String, dynamic> comment) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -219,53 +211,29 @@ class _CommentsSectionWidgetState extends State<CommentsSectionWidget> {
     final timestamp = comment['timestamp'] as DateTime? ?? DateTime.now();
 
     final timeAgo = _getTimeAgo(timestamp);
-    final initials = _getInitials(author);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Avatar with profile picture or initials
+        // Avatar with icon or initials
         Container(
           width: 10.w,
           height: 10.w,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: colorScheme.primary.withValues(alpha: 0.1),
+            color: colorScheme.primaryContainer.withValues(alpha: 0.3),
             border: Border.all(
-              color: colorScheme.outline.withValues(alpha: 0.2),
-              width: 1,
+              color: colorScheme.outline.withValues(alpha: 0.3),
+              width: 2,
             ),
           ),
-          child: avatar.isNotEmpty && avatar.trim().isNotEmpty
-              ? ClipOval(
-                  child: CustomImageWidget(
-                    imageUrl: avatar,
-                    height: 10.w,
-                    width: 10.w,
-                    fit: BoxFit.cover,
-                    errorWidget: Container(
-                      color: colorScheme.primary.withValues(alpha: 0.1),
-                      child: Center(
-                        child: Text(
-                          initials,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              : Center(
-                  child: Text(
-                    initials,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+          child: Center(
+            child: CustomIconWidget(
+              iconName: AvatarUtils.getAvatarIcon(avatar),
+              color: colorScheme.primary,
+              size: 6.w,
+            ),
+          ),
         ),
         SizedBox(width: 3.w),
         // Comment Content
