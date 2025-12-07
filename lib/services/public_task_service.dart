@@ -299,15 +299,12 @@ class PublicTaskService {
       final response = await _supabase
           .from('public_task_participants')
           .select('*')
-          .eq('task_id', taskId)
-          .order('completed_count', ascending: false)
-          .order('contribution', ascending: false)
-          .order('joined_at', ascending: true);
+          .eq('task_id', taskId);
 
       final participants = List<Map<String, dynamic>>.from(response);
       debugPrint('📊 Found ${participants.length} participants in database');
       
-      // Fetch profiles separately
+      // Fetch profiles separately with XP data
       final participantsWithProfiles = await Future.wait(
         participants.map((participant) async {
           final participantUserId = participant['user_id'] as String?;
@@ -315,7 +312,7 @@ class PublicTaskService {
             try {
               final profile = await _supabase
                   .from('profiles')
-                  .select('id, full_name, avatar_url')
+                  .select('id, full_name, avatar_url, total_xp, current_xp, level')
                   .eq('id', participantUserId)
                   .maybeSingle();
               participant['profiles'] = profile;
@@ -327,6 +324,26 @@ class PublicTaskService {
           return participant;
         }),
       );
+      
+      // Sort by total_xp (descending) for leaderboard ranking
+      participantsWithProfiles.sort((a, b) {
+        final aProfile = a['profiles'] as Map<String, dynamic>?;
+        final bProfile = b['profiles'] as Map<String, dynamic>?;
+        final aXp = aProfile?['total_xp'] as int? ?? 0;
+        final bXp = bProfile?['total_xp'] as int? ?? 0;
+        if (aXp != bXp) {
+          return bXp.compareTo(aXp); // Descending order (highest XP first)
+        }
+        // If XP is equal, sort by completed_count, then contribution
+        final aCompleted = a['completed_count'] as int? ?? 0;
+        final bCompleted = b['completed_count'] as int? ?? 0;
+        if (aCompleted != bCompleted) {
+          return bCompleted.compareTo(aCompleted);
+        }
+        final aContribution = a['contribution'] as int? ?? 0;
+        final bContribution = b['contribution'] as int? ?? 0;
+        return bContribution.compareTo(aContribution);
+      });
       
       debugPrint('✅ Returning ${participantsWithProfiles.length} participants with profiles');
       return participantsWithProfiles;

@@ -56,8 +56,16 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
           );
         }
 
-        // Sort by completed_count and contribution
+        // Sort by total_xp (already sorted in service, but ensure consistency)
         participants.sort((a, b) {
+          final aProfile = a['profiles'] as Map<String, dynamic>?;
+          final bProfile = b['profiles'] as Map<String, dynamic>?;
+          final aXp = aProfile?['total_xp'] as int? ?? 0;
+          final bXp = bProfile?['total_xp'] as int? ?? 0;
+          if (aXp != bXp) {
+            return bXp.compareTo(aXp); // Descending order (highest XP first)
+          }
+          // If XP is equal, sort by completed_count, then contribution
           final aCompleted = a['completed_count'] as int? ?? 0;
           final bCompleted = b['completed_count'] as int? ?? 0;
           if (aCompleted != bCompleted) {
@@ -110,8 +118,9 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
                               profile?['email']?.toString().split('@')[0] ?? 
                               'Unknown';
                   final avatar = profile?['avatar_url'] as String? ?? '';
+                  final totalXp = profile?['total_xp'] as int? ?? 0;
+                  final level = profile?['level'] as int? ?? 1;
                   final completedCount = participant['completed_count'] as int? ?? 0;
-                  final contribution = participant['contribution'] as int? ?? 0;
                   final isCurrentUser = userId == currentUser?.id;
                   final rank = index + 1;
 
@@ -188,28 +197,39 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
                     ),
                     subtitle: Row(
                       children: [
+                        // Show XP prominently
+                        CustomIconWidget(
+                          iconName: 'star',
+                          color: colorScheme.primary,
+                          size: 4.w,
+                        ),
+                        SizedBox(width: 1.w),
+                        Text(
+                          '${totalXp.toString()} XP',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 2.w),
+                        Text(
+                          'Level $level',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                         if (completedCount > 0) ...[
+                          SizedBox(width: 3.w),
+                          Text('•', style: theme.textTheme.bodySmall),
+                          SizedBox(width: 3.w),
                           CustomIconWidget(
                             iconName: 'check_circle',
-                            color: colorScheme.primary,
+                            color: colorScheme.onSurfaceVariant,
                             size: 4.w,
                           ),
                           SizedBox(width: 1.w),
                           Text(
                             '$completedCount completed',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                        if (contribution > 0) ...[
-                          if (completedCount > 0) ...[
-                            SizedBox(width: 3.w),
-                            Text('•', style: theme.textTheme.bodySmall),
-                            SizedBox(width: 3.w),
-                          ],
-                          Text(
-                            '$contribution% contribution',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
