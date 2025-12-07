@@ -10,6 +10,8 @@ import './widgets/add_friends_modal_widget.dart';
 import './widgets/empty_state_widget.dart';
 import './widgets/friend_card_widget.dart';
 import './widgets/friends_request_card_widget.dart' show FriendRequestCardWidget;
+import './widgets/friend_profile_modal.dart';
+import '../../services/friend_service.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -283,7 +285,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
               // Navigate to friend profile
             },
             onViewProfile: () {
-              // View friend profile
+              _showFriendProfile(friend);
             },
             onMessage: () {
               // Open message thread
@@ -413,6 +415,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         );
       }
     }
+  }
+
+  void _showFriendProfile(Map<String, dynamic> friend) {
+    final friendService = ref.read(friendServiceProvider);
+    showDialog(
+      context: context,
+      builder: (context) => FriendProfileModal(
+        friend: friend,
+        friendService: friendService,
+      ),
+    );
   }
 
   Future<void> _showRemoveFriendDialog(Map<String, dynamic> friend) async {

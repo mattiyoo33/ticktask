@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'supabase_service.dart';
 
 class FriendService {
@@ -38,12 +39,31 @@ class FriendService {
           continue;
         }
         
-        // Get friend profile
+        // Get friend profile with all needed data
         final friendProfile = await _supabase
             .from('profiles')
-            .select()
+            .select('id, full_name, avatar_url, level, total_xp, created_at')
             .eq('id', friendId)
             .single();
+
+        // Calculate daily streak (consecutive days with any task completion)
+        int dailyStreak = 0;
+        try {
+          dailyStreak = await _calculateDailyStreak(friendId.toString());
+        } catch (e) {
+          debugPrint('Error calculating streak for user $friendId: $e');
+        }
+
+        // Handle created_at - it might be DateTime or String, and might be null
+        String? accountCreatedAtStr;
+        final createdAtValue = friendProfile['created_at'];
+        if (createdAtValue != null) {
+          if (createdAtValue is DateTime) {
+            accountCreatedAtStr = createdAtValue.toIso8601String();
+          } else if (createdAtValue is String) {
+            accountCreatedAtStr = createdAtValue;
+          }
+        }
 
         friends.add({
           'id': friendId,
@@ -51,6 +71,8 @@ class FriendService {
           'avatar': friendProfile['avatar_url'] ?? '',
           'level': friendProfile['level'] ?? 1,
           'xp': friendProfile['total_xp'] ?? 0,
+          'current_streak': dailyStreak,
+          'account_created_at': accountCreatedAtStr,
           'friendship_id': friendship['id'],
         });
       }
@@ -260,6 +282,73 @@ class FriendService {
           .toList();
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Calculate daily streak for a user (consecutive days with any task completion)
+  Future<int> _calculateDailyStreak(String userId) async {
+    try {
+      // Get all unique completion dates for this user
+      final completions = await _supabase
+          .from('task_completions')
+          .select('completed_at')
+          .eq('user_id', userId);
+
+      if (completions.isEmpty) return 0;
+
+      // Get unique dates (normalize to local date strings)
+      final completionDates = <String>{};
+      for (var completion in completions) {
+        final completedAt = completion['completed_at'] as String?;
+        if (completedAt != null) {
+          final date = DateTime.parse(completedAt).toLocal();
+          final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          completionDates.add(dateStr);
+        }
+      }
+
+      if (completionDates.isEmpty) return 0;
+
+      // Sort dates descending
+      final sortedDates = completionDates.toList()..sort((a, b) => b.compareTo(a));
+
+      // Calculate consecutive days starting from today or yesterday
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      
+      int streak = 0;
+      DateTime checkDate = today;
+      
+      // Check if today has a completion
+      if (sortedDates.contains(todayStr)) {
+        streak = 1;
+        checkDate = today.subtract(const Duration(days: 1));
+      } else {
+        // Start from yesterday (today doesn't count if no completion)
+        checkDate = today.subtract(const Duration(days: 1));
+      }
+
+      // Count consecutive days backwards
+      int daysChecked = 0;
+      while (daysChecked < 365) {
+        final dateStr = '${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}';
+        
+        if (sortedDates.contains(dateStr)) {
+          streak++;
+          checkDate = checkDate.subtract(const Duration(days: 1));
+          daysChecked++;
+        } else {
+          // Streak broken
+          break;
+        }
+      }
+
+      return streak;
+    } catch (e) {
+      // Return 0 if calculation fails
+      debugPrint('Error calculating streak: $e');
+      return 0;
     }
   }
 
