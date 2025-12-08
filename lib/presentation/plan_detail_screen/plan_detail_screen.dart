@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../task_detail_screen/widgets/celebration_overlay_widget.dart';
 import 'widgets/plan_header_widget.dart';
 import 'widgets/plan_task_item_widget.dart';
 
@@ -22,6 +23,8 @@ class PlanDetailScreen extends ConsumerStatefulWidget {
 
 class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   bool _isRefreshing = false;
+  bool _showCelebration = false;
+  int _xpGained = 0;
 
   Future<void> _refreshPlan() async {
     setState(() => _isRefreshing = true);
@@ -48,6 +51,9 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   Future<void> _handleTaskComplete(String taskId) async {
     try {
       final taskService = ref.read(taskServiceProvider);
+      
+      // Get streak data for potential bonus
+      final streakData = await taskService.getTaskStreak(taskId);
       final result = await taskService.completeTask(taskId);
       
       final planId = ModalRoute.of(context)?.settings.arguments as String?;
@@ -62,23 +68,12 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       if (mounted) {
         final xpAwarded = result['xp_awarded'] as bool? ?? false;
         final xpGained = result['xp_gained'] as int? ?? 0;
+        final streakBonus = streakData?['has_streak_bonus'] == true && xpAwarded ? 25 : 0;
         
-        if (xpAwarded && xpGained > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Task completed! +$xpGained XP'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Task completed (late - no XP)'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        setState(() {
+          _xpGained = xpGained + streakBonus;
+          _showCelebration = true; // Show celebration for all completions
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -90,6 +85,12 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         );
       }
     }
+  }
+
+  void _onCelebrationComplete() {
+    setState(() {
+      _showCelebration = false;
+    });
   }
 
   @override
@@ -117,23 +118,25 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
 
     final planAsync = ref.watch(planByIdProvider(planId));
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: CustomAppBar(
-        title: 'Plan Details',
-        variant: CustomAppBarVariant.standard,
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: _refreshPlan,
-            icon: Icon(
-              Icons.refresh,
-              color: colorScheme.onSurface,
-            ),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: colorScheme.surface,
+          appBar: CustomAppBar(
+            title: 'Plan Details',
+            variant: CustomAppBarVariant.standard,
+            centerTitle: false,
+            actions: [
+              IconButton(
+                onPressed: _refreshPlan,
+                icon: Icon(
+                  Icons.refresh,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: RefreshIndicator(
+          body: RefreshIndicator(
         onRefresh: _refreshPlan,
         child: planAsync.when(
           data: (plan) {
@@ -306,22 +309,28 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          final planId = ModalRoute.of(context)?.settings.arguments as String?;
-          if (planId != null) {
-            _handleAddTask(planId);
-          }
-        },
-        icon: CustomIconWidget(
-          iconName: 'add',
-          color: colorScheme.onPrimary,
-          size: 24,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            final planId = ModalRoute.of(context)?.settings.arguments as String?;
+            if (planId != null) {
+              _handleAddTask(planId);
+            }
+          },
+          icon: CustomIconWidget(
+            iconName: 'add',
+            color: colorScheme.onPrimary,
+            size: 24,
+          ),
+          label: Text('Add Task'),
         ),
-        label: Text('Add Task'),
       ),
-    );
+      // Celebration Overlay
+      CelebrationOverlayWidget(
+        isVisible: _showCelebration,
+        xpGained: _xpGained,
+        onAnimationComplete: _onCelebrationComplete,
+      ),
+    ];
   }
 }
 
