@@ -60,13 +60,8 @@ class PlanCardWidget extends ConsumerWidget {
     final startTime = plan['start_time'] as String?;
     final endTime = plan['end_time'] as String?;
 
-    // Get plan stats
-    final planStatsAsync = ref.watch(
-      FutureProvider((ref) async {
-        final planService = ref.watch(planServiceProvider);
-        return await planService.getPlanStats(planId);
-      }),
-    );
+    // Get plan stats using stable provider
+    final planStatsAsync = ref.watch(planStatsProvider(planId));
 
     return Card(
       margin: EdgeInsets.only(bottom: 2.h),

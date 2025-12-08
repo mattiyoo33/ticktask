@@ -229,6 +229,26 @@ final allPlansProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async 
   return await planService.getPlans();
 });
 
+// Plan Stats Provider - watches auth state to auto-invalidate on user change
+final planStatsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, planId) async {
+  // Watch auth state to invalidate when user changes
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  // If not authenticated, return empty stats
+  if (authStateValue?.session == null) {
+    return {
+      'total_tasks': 0,
+      'completed_tasks': 0,
+      'active_tasks': 0,
+      'completion_percentage': 0,
+    };
+  }
+  
+  final planService = ref.watch(planServiceProvider);
+  return await planService.getPlanStats(planId);
+});
+
 // Plan by ID Provider
 final planByIdProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, planId) async {
   final authState = ref.watch(authStateProvider);
