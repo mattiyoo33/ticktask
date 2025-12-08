@@ -8,6 +8,7 @@ class QuickActionsWidget extends StatelessWidget {
   final VoidCallback onViewAllTasks;
   final VoidCallback onInviteFriends;
   final VoidCallback onViewProfile;
+  final VoidCallback onViewPlans;
 
   const QuickActionsWidget({
     super.key,
@@ -15,6 +16,7 @@ class QuickActionsWidget extends StatelessWidget {
     required this.onViewAllTasks,
     required this.onInviteFriends,
     required this.onViewProfile,
+    required this.onViewPlans,
   });
 
   @override
@@ -82,6 +84,24 @@ class QuickActionsWidget extends StatelessWidget {
                   color: AppTheme.warningLight,
                   onTap: onViewProfile,
                 ),
+              ),
+            ],
+          ),
+          SizedBox(height: 3.w),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  context: context,
+                  title: 'View Plans',
+                  icon: 'calendar_today',
+                  color: colorScheme.tertiary,
+                  onTap: onViewPlans,
+                ),
+              ),
+              SizedBox(width: 3.w),
+              Expanded(
+                child: SizedBox(), // Empty space to maintain grid alignment
               ),
             ],
           ),

@@ -295,6 +295,8 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                           Navigator.pushNamed(context, '/friends-screen'),
                       onViewProfile: () =>
                           Navigator.pushNamed(context, '/profile-screen'),
+                      onViewPlans: () =>
+                          Navigator.pushNamed(context, '/plans-screen'),
                     ),
                     SizedBox(height: 10.h),
                   ],
