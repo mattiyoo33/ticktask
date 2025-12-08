@@ -55,6 +55,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         ref.invalidate(planByIdProvider(planId));
         ref.invalidate(allTasksProvider);
         ref.invalidate(todaysTasksProvider);
+        ref.invalidate(overallUserStreakProvider);
+        ref.invalidate(activeStreaksProvider);
       }
 
       if (mounted) {

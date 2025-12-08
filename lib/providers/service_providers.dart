@@ -279,3 +279,33 @@ final publicPlansProvider = FutureProvider.family<List<Map<String, dynamic>>, Pu
   return result;
 });
 
+// Overall User Streak Provider
+final overallUserStreakProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  if (authStateValue?.session == null) {
+    return {
+      'current_streak': 0,
+      'longest_streak': 0,
+      'last_completed_at': null,
+    };
+  }
+  
+  final taskService = ref.watch(taskServiceProvider);
+  return await taskService.getOverallUserStreak();
+});
+
+// Active Streaks Provider
+final activeStreaksProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  if (authStateValue?.session == null) {
+    return [];
+  }
+  
+  final taskService = ref.watch(taskServiceProvider);
+  return await taskService.getAllActiveStreaks();
+});
+

@@ -668,6 +668,139 @@ class TaskService {
     }
   }
 
+  // Get overall user streak (consecutive days with any task completion)
+  Future<Map<String, dynamic>> getOverallUserStreak() async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // Get all unique completion dates for the user, ordered by date descending
+      final completionsResponse = await _supabase
+          .from('task_completions')
+          .select('completed_at')
+          .eq('user_id', _userId!)
+          .order('completed_at', ascending: false);
+
+      final completions = List<Map<String, dynamic>>.from(completionsResponse);
+      
+      if (completions.isEmpty) {
+        return {
+          'current_streak': 0,
+          'longest_streak': 0,
+          'last_completed_at': null,
+        };
+      }
+
+      // Calculate current streak (consecutive days from today backwards)
+      int currentStreak = 0;
+      DateTime? lastDate;
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      
+      // Get unique dates
+      final uniqueDates = <DateTime>{};
+      for (final completion in completions) {
+        final completedAt = DateTime.parse(completion['completed_at'] as String);
+        final completedDate = DateTime(completedAt.year, completedAt.month, completedAt.day);
+        uniqueDates.add(completedDate);
+      }
+      
+      final sortedDates = uniqueDates.toList()..sort((a, b) => b.compareTo(a));
+      
+      // Calculate current streak - count consecutive days backwards from today
+      DateTime expectedDate = todayDate;
+      for (final date in sortedDates) {
+        final daysDiff = expectedDate.difference(date).inDays;
+        if (daysDiff == 0 || daysDiff == 1) {
+          // Today or yesterday - continue streak
+          if (daysDiff == 0) {
+            currentStreak++;
+            expectedDate = date.subtract(const Duration(days: 1));
+          } else {
+            // Yesterday - continue streak
+            currentStreak++;
+            expectedDate = date.subtract(const Duration(days: 1));
+          }
+          lastDate = date;
+        } else {
+          // Gap found - streak ends
+          break;
+        }
+      }
+
+      // Calculate longest streak
+      int longestStreak = 0;
+      int tempStreak = 0;
+      DateTime? prevDate;
+      
+      for (final date in sortedDates) {
+        if (prevDate == null) {
+          tempStreak = 1;
+          prevDate = date;
+        } else {
+          final daysDiff = prevDate.difference(date).inDays;
+          if (daysDiff == 1) {
+            tempStreak++;
+          } else {
+            longestStreak = tempStreak > longestStreak ? tempStreak : longestStreak;
+            tempStreak = 1;
+          }
+          prevDate = date;
+        }
+      }
+      longestStreak = tempStreak > longestStreak ? tempStreak : longestStreak;
+
+      return {
+        'current_streak': currentStreak,
+        'longest_streak': longestStreak,
+        'last_completed_at': sortedDates.isNotEmpty ? sortedDates.first.toIso8601String() : null,
+      };
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get all active streaks for the user (tasks with streak data)
+  Future<List<Map<String, dynamic>>> getAllActiveStreaks() async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // Get all streaks with task information
+      final streaksResponse = await _supabase
+          .from('task_streaks')
+          .select('''
+            *,
+            tasks:tasks!inner(
+              id,
+              title,
+              is_recurring,
+              status
+            )
+          ''')
+          .eq('user_id', _userId!)
+          .eq('tasks.status', 'active')
+          .eq('tasks.is_recurring', true)
+          .gt('current_streak', 0)
+          .order('current_streak', ascending: false);
+
+      final streaks = List<Map<String, dynamic>>.from(streaksResponse);
+      
+      // Transform to match the expected format
+      return streaks.map((streak) {
+        final task = streak['tasks'] as Map<String, dynamic>?;
+        return {
+          'id': task?['id']?.toString(),
+          'title': task?['title'] ?? 'Untitled Task',
+          'dayCount': streak['current_streak'] as int? ?? 0,
+          'maxStreak': streak['max_streak'] as int? ?? 0,
+          'hasStreakBonus': streak['has_streak_bonus'] as bool? ?? false,
+          'lastCompletedAt': streak['last_completed_at'],
+        };
+      }).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Get task participants (for collaborative tasks)
   Future<List<Map<String, dynamic>>> getTaskParticipants(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');

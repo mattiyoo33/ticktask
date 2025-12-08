@@ -105,9 +105,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         final totalXP = userProfile?['total_xp'] as int? ?? 0;
         final friendCount = friends.length;
         
-        // Calculate current streak (simplified - can be enhanced)
-        int currentStreak = 0;
-        int longestStreak = 0;
+        // Get overall user streak
+        final streakAsync = ref.watch(overallUserStreakProvider);
+        final streakData = streakAsync.value ?? {
+          'current_streak': 0,
+          'longest_streak': 0,
+        };
+        final currentStreak = streakData['current_streak'] as int? ?? 0;
+        final longestStreak = streakData['longest_streak'] as int? ?? 0;
         
         return {
           "totalTasks": totalTasks,

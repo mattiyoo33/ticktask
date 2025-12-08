@@ -604,9 +604,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       // Refresh task data
       await _loadTaskData();
       
-      // Refresh task lists
+      // Refresh task lists and streaks
       ref.invalidate(allTasksProvider);
       ref.invalidate(todaysTasksProvider);
+      ref.invalidate(overallUserStreakProvider);
+      ref.invalidate(activeStreaksProvider);
       
       setState(() {
         _isLoading = false;

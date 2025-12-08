@@ -81,18 +81,9 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
 
   // Get current streaks from database (tasks with recurring streaks)
   List<Map<String, dynamic>> get _currentStreaks {
-    final tasksAsync = ref.watch(allTasksProvider);
-    return tasksAsync.when(
-      data: (tasks) {
-        // Filter recurring tasks and get their streak data
-        final recurringTasks = tasks.where((task) => 
-          task['is_recurring'] == true && task['status'] == 'active'
-        ).toList();
-        
-        // For now, return empty - streaks will be populated when tasks are completed
-        // TODO: Fetch actual streak data from task_streaks table
-        return [];
-      },
+    final streaksAsync = ref.watch(activeStreaksProvider);
+    return streaksAsync.when(
+      data: (streaks) => streaks,
       loading: () => [],
       error: (_, __) => [],
     );

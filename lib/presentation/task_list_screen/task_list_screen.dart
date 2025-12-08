@@ -811,6 +811,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       ref.invalidate(todaysTasksProvider);
       ref.invalidate(recentActivitiesProvider);
       ref.invalidate(userProfileFromDbProvider);
+      ref.invalidate(overallUserStreakProvider);
+      ref.invalidate(activeStreaksProvider);
       
       setState(() {
       _selectedTaskIds.clear();
