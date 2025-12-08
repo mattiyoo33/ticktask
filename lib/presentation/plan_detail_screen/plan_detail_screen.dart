@@ -137,9 +137,9 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             ],
           ),
           body: RefreshIndicator(
-        onRefresh: _refreshPlan,
-        child: planAsync.when(
-          data: (plan) {
+            onRefresh: _refreshPlan,
+            child: planAsync.when(
+              data: (plan) {
             if (plan == null) {
               return Center(
                 child: Column(
@@ -309,27 +309,29 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             ),
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            final planId = ModalRoute.of(context)?.settings.arguments as String?;
-            if (planId != null) {
-              _handleAddTask(planId);
-            }
-          },
-          icon: CustomIconWidget(
-            iconName: 'add',
-            color: colorScheme.onPrimary,
-            size: 24,
-          ),
-          label: Text('Add Task'),
         ),
-      ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () {
+              final planId = ModalRoute.of(context)?.settings.arguments as String?;
+              if (planId != null) {
+                _handleAddTask(planId);
+              }
+            },
+            icon: CustomIconWidget(
+              iconName: 'add',
+              color: colorScheme.onPrimary,
+              size: 24,
+            ),
+            label: Text('Add Task'),
+          ),
+        ),
       // Celebration Overlay
       CelebrationOverlayWidget(
         isVisible: _showCelebration,
         xpGained: _xpGained,
         onAnimationComplete: _onCelebrationComplete,
       ),
-    ];
+    ],
+    );
   }
 }
