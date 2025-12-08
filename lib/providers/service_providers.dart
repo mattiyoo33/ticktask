@@ -3,6 +3,7 @@ import '../services/task_service.dart';
 import '../services/friend_service.dart';
 import '../services/activity_service.dart';
 import '../services/public_task_service.dart';
+import '../services/plan_service.dart';
 import 'auth_provider.dart';
 
 // Task Service Provider
@@ -23,6 +24,11 @@ final activityServiceProvider = Provider<ActivityService>((ref) {
 // Public Task Service Provider
 final publicTaskServiceProvider = Provider<PublicTaskService>((ref) {
   return PublicTaskService();
+});
+
+// Plan Service Provider
+final planServiceProvider = Provider<PlanService>((ref) {
+  return PlanService();
 });
 
 // Today's Tasks Provider - watches auth state to auto-invalidate on user change
@@ -206,5 +212,33 @@ final publicTasksProvider = FutureProvider.family<List<Map<String, dynamic>>, Pu
 final publicTaskParticipantsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, taskId) async {
   final publicTaskService = ref.watch(publicTaskServiceProvider);
   return await publicTaskService.getPublicTaskParticipants(taskId);
+});
+
+// All Plans Provider - watches auth state to auto-invalidate on user change
+final allPlansProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  // Watch auth state to invalidate when user changes
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  // If not authenticated, return empty list
+  if (authStateValue?.session == null) {
+    return [];
+  }
+  
+  final planService = ref.watch(planServiceProvider);
+  return await planService.getPlans();
+});
+
+// Plan by ID Provider
+final planByIdProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, planId) async {
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  if (authStateValue?.session == null) {
+    return null;
+  }
+  
+  final planService = ref.watch(planServiceProvider);
+  return await planService.getPlanById(planId);
 });
 

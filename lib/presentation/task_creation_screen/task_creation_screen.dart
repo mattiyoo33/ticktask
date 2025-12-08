@@ -45,6 +45,9 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   bool _isPublicTask = false;
   String? _selectedCategoryId; // Category ID for public tasks
 
+  // Plan options
+  String? _planId; // Plan ID if task is being added to a plan
+
   // UI state
   bool _isLoading = false;
   bool _showTemplates = true;
@@ -66,8 +69,10 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
         final isPublic = args['isPublic'] as bool? ?? false;
+        final planId = args['planId'] as String?;
         setState(() {
           _isPublicTask = isPublic;
+          _planId = planId;
         });
       }
     });
@@ -283,6 +288,20 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         // Since we can't invalidate all family instances, we'll let them refresh naturally
         // The provider will refetch when the discover page is opened
       } else {
+        // Get task order if adding to a plan
+        int? taskOrder;
+        if (_planId != null) {
+          try {
+            final planService = ref.read(planServiceProvider);
+            final plan = await planService.getPlanById(_planId!);
+            final tasks = plan?['tasks'] as List<dynamic>? ?? [];
+            taskOrder = tasks.length; // Set order to current count
+          } catch (e) {
+            // If plan fetch fails, continue without taskOrder
+            debugPrint('Error fetching plan for task order: $e');
+          }
+        }
+
         // Create private task
         await taskService.createTask(
           title: _titleController.text.trim(),
@@ -298,6 +317,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           nextOccurrence: nextOccurrence,
           isCollaborative: _collaborationEnabled,
           participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
+          planId: _planId,
+          taskOrder: taskOrder,
         );
       }
 
@@ -305,6 +326,12 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       if (!_isPublicTask) {
         ref.invalidate(allTasksProvider);
         ref.invalidate(todaysTasksProvider);
+        
+        // Refresh plan if task was added to a plan
+        if (_planId != null) {
+          ref.invalidate(planByIdProvider(_planId!));
+          ref.invalidate(allPlansProvider);
+        }
       }
 
       // Show success message
@@ -340,7 +367,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         );
 
         // Navigate back to home
-        Navigator.pop(context);
+        // If task was added to a plan, return true to refresh plan detail screen
+        Navigator.pop(context, _planId != null ? true : null);
       }
     } catch (e) {
       if (mounted) {

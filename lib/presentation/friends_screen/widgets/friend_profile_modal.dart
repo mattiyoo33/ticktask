@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_image_widget.dart';
+import '../../../utils/avatar_utils.dart';
 import '../../../services/friend_service.dart';
 
 class FriendProfileModal extends StatelessWidget {
@@ -18,14 +18,6 @@ class FriendProfileModal extends StatelessWidget {
     required this.friendService,
   });
 
-  String _getInitials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
 
   String _formatXp(int xp) {
     if (xp >= 1000) {
@@ -71,7 +63,6 @@ class FriendProfileModal extends StatelessWidget {
         ? DateTime.tryParse(accountCreatedAtStr)
         : null;
 
-    final initials = _getInitials(name);
     final formattedXp = _formatXp(xp);
     final streakText = currentStreak != null && currentStreak > 0 
         ? '$currentStreak-day streak' 
@@ -94,47 +85,19 @@ class FriendProfileModal extends StatelessWidget {
               height: 25.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                 border: Border.all(
                   color: colorScheme.primary.withValues(alpha: 0.3),
                   width: 3,
                 ),
               ),
-              child: avatar.isNotEmpty
-                  ? ClipOval(
-                      child: CustomImageWidget(
-                        imageUrl: avatar,
-                        width: 25.w,
-                        height: 25.w,
-                        fit: BoxFit.cover,
-                        errorWidget: Container(
-                          color: colorScheme.primary.withValues(alpha: 0.1),
-                          child: Center(
-                            child: Text(
-                              initials,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: colorScheme.primary.withValues(alpha: 0.1),
-                      ),
-                      child: Center(
-                        child: Text(
-                          initials,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+              child: Center(
+                child: CustomIconWidget(
+                  iconName: AvatarUtils.getAvatarIcon(avatar),
+                  color: colorScheme.primary,
+                  size: 15.w,
+                ),
+              ),
             ),
             SizedBox(height: 3.h),
             // Name

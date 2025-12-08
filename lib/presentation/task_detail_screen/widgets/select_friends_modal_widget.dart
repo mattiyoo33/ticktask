@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_image_widget.dart';
+import '../../../utils/avatar_utils.dart';
 
 class SelectFriendsModalWidget extends ConsumerStatefulWidget {
   final String taskId;
@@ -91,14 +91,6 @@ class _SelectFriendsModalWidgetState
     }
   }
 
-  String _getInitials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -218,6 +210,7 @@ class _SelectFriendsModalWidgetState
                         height: 12.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                           border: Border.all(
                             color: isSelected
                                 ? colorScheme.primary
@@ -225,31 +218,13 @@ class _SelectFriendsModalWidgetState
                             width: isSelected ? 2 : 1,
                           ),
                         ),
-                        child: avatar.isNotEmpty
-                            ? ClipOval(
-                                child: CustomImageWidget(
-                                  imageUrl: avatar,
-                                  width: 12.w,
-                                  height: 12.w,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: colorScheme.primary
-                                      .withValues(alpha: 0.1),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _getInitials(name),
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                        child: Center(
+                          child: CustomIconWidget(
+                            iconName: AvatarUtils.getAvatarIcon(avatar),
+                            color: colorScheme.primary,
+                            size: 6.w,
+                          ),
+                        ),
                       ),
                       title: Text(
                         name,

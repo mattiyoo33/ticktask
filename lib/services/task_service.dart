@@ -290,6 +290,8 @@ class TaskService {
     DateTime? nextOccurrence,
     bool isCollaborative = false,
     List<String> participantIds = const [],
+    String? planId,
+    int? taskOrder,
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -309,6 +311,8 @@ class TaskService {
         'next_occurrence': nextOccurrence?.toIso8601String(),
         'is_collaborative': isCollaborative,
         'status': 'active',
+        if (planId != null) 'plan_id': planId,
+        if (taskOrder != null) 'task_order': taskOrder,
       };
 
       final response = await _supabase
@@ -389,6 +393,8 @@ class TaskService {
     String? recurrenceFrequency,
     DateTime? nextOccurrence,
     bool? isCollaborative,
+    String? planId,
+    int? taskOrder,
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -413,6 +419,8 @@ class TaskService {
         updates['next_occurrence'] = nextOccurrence.toIso8601String();
       }
       if (isCollaborative != null) updates['is_collaborative'] = isCollaborative;
+      if (planId != null) updates['plan_id'] = planId;
+      if (taskOrder != null) updates['task_order'] = taskOrder;
 
       final response = await _supabase
           .from('tasks')

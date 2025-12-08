@@ -11,6 +11,9 @@ import '../presentation/friends_screen/friends_screen.dart';
 import '../presentation/friends_screen/widgets/search_users_screen.dart';
 import '../presentation/discover_screen/discover_screen.dart';
 import '../presentation/public_task_detail_screen/public_task_detail_screen.dart';
+import '../presentation/plans_screen/plans_screen.dart';
+import '../presentation/plan_creation_screen/plan_creation_screen.dart';
+import '../presentation/plan_detail_screen/plan_detail_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -26,6 +29,9 @@ class AppRoutes {
   static const String searchUsers = '/search-users';
   static const String discover = '/discover-screen';
   static const String publicTaskDetail = '/public-task-detail-screen';
+  static const String plans = '/plans-screen';
+  static const String planCreation = '/plan-creation-screen';
+  static const String planDetail = '/plan-detail-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -41,5 +47,8 @@ class AppRoutes {
     searchUsers: (context) => const SearchUsersScreen(),
     discover: (context) => const DiscoverScreen(),
     publicTaskDetail: (context) => const PublicTaskDetailScreen(),
+    plans: (context) => const PlansScreen(),
+    planCreation: (context) => const PlanCreationScreen(),
+    planDetail: (context) => const PlanDetailScreen(),
   };
 }
