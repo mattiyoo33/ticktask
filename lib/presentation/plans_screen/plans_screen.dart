@@ -125,7 +125,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomBottomBar(currentIndex: 2),
+      bottomNavigationBar: const CustomBottomBar(currentIndex: 3),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.pushNamed(context, '/plan-creation-screen');

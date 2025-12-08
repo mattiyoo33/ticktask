@@ -615,24 +615,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _xpGained = xpGained + streakBonus;
         _showCelebration = true; // Show celebration for all completions
       });
-
-      if (mounted) {
-        if (xpAwarded) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Task completed! +${xpGained + streakBonus} XP earned 🎉'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Task completed, but no XP awarded (completed after deadline)'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     } catch (e) {
       setState(() {
         _isLoading = false;

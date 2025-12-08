@@ -50,6 +50,12 @@ class CustomBottomBar extends StatelessWidget {
       route: '/task-list-screen',
     ),
     _BottomNavItem(
+      icon: Icons.calendar_today_outlined,
+      selectedIcon: Icons.calendar_today,
+      label: 'Plans',
+      route: '/plans-screen',
+    ),
+    _BottomNavItem(
       icon: Icons.people_outline,
       selectedIcon: Icons.people,
       label: 'Friends',

@@ -24,11 +24,12 @@ class TaskService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      // Get tasks owned by user
+      // Get tasks owned by user (exclude plan tasks)
       var ownedTasksQuery = _supabase
           .from('tasks')
           .select()
-          .eq('user_id', _userId!);
+          .eq('user_id', _userId!)
+          .isFilter('plan_id', null); // Exclude tasks that belong to a plan
 
       if (status != null) {
         ownedTasksQuery = ownedTasksQuery.eq('status', status);
@@ -165,11 +166,12 @@ class TaskService {
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      // Get owned tasks
+      // Get owned tasks (exclude plan tasks)
       final ownedTasks = await _supabase
           .from('tasks')
           .select()
           .eq('user_id', _userId!)
+          .isFilter('plan_id', null) // Exclude tasks that belong to a plan
           .inFilter('status', ['active', 'scheduled'])
           .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})')
           .order('due_time', ascending: true)

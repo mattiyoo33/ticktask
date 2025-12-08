@@ -240,7 +240,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         ],
       ),
       bottomNavigationBar: const CustomBottomBar(
-        currentIndex: 3,
+        currentIndex: 4,
         variant: CustomBottomBarVariant.standard,
       ),
     );

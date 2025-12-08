@@ -25,7 +25,8 @@ class PlanService {
       var query = _supabase
           .from('plans')
           .select()
-          .eq('user_id', _userId!);
+          .eq('user_id', _userId!)
+          .eq('is_public', false); // Only get private plans
 
       if (planDate != null) {
         query = query.eq('plan_date', planDate.toIso8601String().split('T')[0]);
