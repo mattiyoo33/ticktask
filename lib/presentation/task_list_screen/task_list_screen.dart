@@ -706,6 +706,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           Navigator.pop(context);
           Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': true});
         },
+        onPrivatePlanSelected: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': false});
+        },
+        onPublicPlanSelected: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': true});
+        },
       ),
     );
   }

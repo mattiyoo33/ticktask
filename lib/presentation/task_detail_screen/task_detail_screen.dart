@@ -611,7 +611,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       setState(() {
         _isLoading = false;
         _xpGained = xpGained + streakBonus;
-        _showCelebration = xpAwarded; // Only show celebration if XP was awarded
+        _showCelebration = true; // Show celebration for all completions
       });
 
       if (mounted) {

@@ -242,3 +242,40 @@ final planByIdProvider = FutureProvider.family<Map<String, dynamic>?, String>((r
   return await planService.getPlanById(planId);
 });
 
+// Public Plan Filters - similar to PublicTaskFilters
+class PublicPlanFilters {
+  final String? searchQuery;
+  final int limit;
+  final int offset;
+
+  const PublicPlanFilters({
+    this.searchQuery,
+    this.limit = 50,
+    this.offset = 0,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PublicPlanFilters &&
+          runtimeType == other.runtimeType &&
+          searchQuery == other.searchQuery &&
+          limit == other.limit &&
+          offset == other.offset;
+
+  @override
+  int get hashCode => searchQuery.hashCode ^ limit.hashCode ^ offset.hashCode;
+}
+
+// Public Plans Provider
+final publicPlansProvider = FutureProvider.family<List<Map<String, dynamic>>, PublicPlanFilters>((ref, filters) async {
+  final planService = ref.watch(planServiceProvider);
+  final result = await planService.getPublicPlans(
+    searchQuery: filters.searchQuery,
+    limit: filters.limit,
+    offset: filters.offset,
+  );
+  ref.keepAlive();
+  return result;
+});
+

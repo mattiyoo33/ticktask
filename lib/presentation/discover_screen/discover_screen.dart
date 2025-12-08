@@ -8,6 +8,7 @@ import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import '../../widgets/custom_app_bar.dart';
 import './widgets/public_task_card_widget.dart';
+import './widgets/public_plan_card_widget.dart';
 import './widgets/category_filter_widget.dart';
 import './widgets/task_type_choice_modal.dart';
 
@@ -23,6 +24,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
+  int _selectedTab = 0; // 0 = Tasks, 1 = Plans
 
   @override
   void dispose() {
@@ -77,17 +79,27 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Create filter object - using a class with proper equality
-    final filters = PublicTaskFilters(
+    // Create filter objects
+    final taskFilters = PublicTaskFilters(
       categoryId: _selectedCategoryId,
       searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
       limit: 50,
       offset: 0,
     );
     
-    // Watch public tasks with filters
+    final planFilters = PublicPlanFilters(
+      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+      limit: 50,
+      offset: 0,
+    );
+    
+    // Watch public tasks and plans with filters
     final publicTasksAsync = ref.watch(
-      publicTasksProvider(filters),
+      publicTasksProvider(taskFilters),
+    );
+    
+    final publicPlansAsync = ref.watch(
+      publicPlansProvider(planFilters),
     );
 
     return Scaffold(
@@ -115,7 +127,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               controller: _searchController,
               onChanged: _handleSearch,
               decoration: InputDecoration(
-                hintText: 'Search public tasks...',
+                hintText: _selectedTab == 0 ? 'Search public tasks...' : 'Search public plans...',
                 prefixIcon: CustomIconWidget(
                   iconName: 'search',
                   color: colorScheme.onSurfaceVariant,
@@ -144,15 +156,46 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             ),
           ),
 
-          // Category Filter
-          CategoryFilterWidget(
-            selectedCategoryId: _selectedCategoryId,
-            onCategorySelected: _handleCategoryFilter,
+          // Tab Switcher
+          Container(
+            margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTabButton(
+                    context,
+                    label: 'Tasks',
+                    index: 0,
+                    icon: 'checklist',
+                  ),
+                ),
+                Expanded(
+                  child: _buildTabButton(
+                    context,
+                    label: 'Plans',
+                    index: 1,
+                    icon: 'event',
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // Public Tasks List
+          // Category Filter (only for tasks)
+          if (_selectedTab == 0)
+            CategoryFilterWidget(
+              selectedCategoryId: _selectedCategoryId,
+              onCategorySelected: _handleCategoryFilter,
+            ),
+
+          // Content List
           Expanded(
-            child: publicTasksAsync.when(
+            child: _selectedTab == 0
+                ? publicTasksAsync.when(
               data: (tasks) {
                 if (tasks.isEmpty) {
                   return Center(
@@ -259,6 +302,112 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   ),
                 );
               },
+            )
+                : publicPlansAsync.when(
+              data: (plans) {
+                if (plans.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CustomIconWidget(
+                          iconName: 'event',
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          size: 64,
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'No public plans found',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        SizedBox(height: 1.h),
+                        Text(
+                          _searchQuery.isNotEmpty
+                              ? 'Try a different search term'
+                              : 'Be the first to share a plan!',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(publicPlansProvider(PublicPlanFilters(
+                      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+                      limit: 50,
+                      offset: 0,
+                    )));
+                  },
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(4.w),
+                    itemCount: plans.length,
+                    itemBuilder: (context, index) {
+                      final plan = plans[index];
+                      return PublicPlanCardWidget(
+                        plan: plan,
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/plan-detail-screen',
+                            arguments: plan['id'] as String,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
+              loading: () => Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (error, stack) {
+                debugPrint('❌ Discover page error: $error');
+                debugPrint('Stack trace: $stack');
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomIconWidget(
+                        iconName: 'error',
+                        color: colorScheme.error,
+                        size: 48,
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        'Failed to load plans',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colorScheme.error,
+                        ),
+                      ),
+                      SizedBox(height: 1.h),
+                      Text(
+                        error.toString(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 2.h),
+                      TextButton(
+                        onPressed: () {
+                          ref.invalidate(publicPlansProvider(PublicPlanFilters(
+                            searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+                            limit: 50,
+                            offset: 0,
+                          )));
+                        },
+                        child: Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -273,6 +422,45 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           iconName: 'add',
           color: Colors.white,
           size: 28,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton(BuildContext context, {required String label, required int index, required String icon}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isSelected = _selectedTab == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTab = index;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 2.h),
+        decoration: BoxDecoration(
+          color: isSelected ? colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CustomIconWidget(
+              iconName: icon,
+              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+              size: 5.w,
+            ),
+            SizedBox(width: 2.w),
+            Text(
+              label,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );

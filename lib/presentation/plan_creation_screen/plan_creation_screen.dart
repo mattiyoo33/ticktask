@@ -25,6 +25,22 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
   bool _isLoading = false;
+  bool _isPublicPlan = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Read arguments after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        final isPublic = args['isPublic'] as bool? ?? false;
+        setState(() {
+          _isPublicPlan = isPublic;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -128,6 +144,7 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
         planDate: _selectedDate,
         startTime: _startTime != null ? _formatTimeOfDay(_startTime!) : null,
         endTime: _endTime != null ? _formatTimeOfDay(_endTime!) : null,
+        isPublic: _isPublicPlan,
       );
 
       ref.invalidate(allPlansProvider);
@@ -170,7 +187,7 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: CustomAppBar(
-        title: 'Create Plan',
+        title: _isPublicPlan ? 'Create Public Plan' : 'Create Private Plan',
         variant: CustomAppBarVariant.standard,
         centerTitle: false,
       ),
@@ -423,7 +440,7 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
                         ),
                       )
                     : Text(
-                        'Create Plan',
+                        _isPublicPlan ? 'Create Public Plan' : 'Create Private Plan',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: colorScheme.onPrimary,

@@ -82,6 +82,7 @@ class PlanService {
     DateTime? planDate,
     String? startTime,
     String? endTime,
+    bool isPublic = false,
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -93,6 +94,7 @@ class PlanService {
         'plan_date': planDate?.toIso8601String().split('T')[0], // Store only date part
         'start_time': startTime,
         'end_time': endTime,
+        'is_public': isPublic,
       };
 
       final response = await _supabase
@@ -102,6 +104,78 @@ class PlanService {
           .single();
 
       return Map<String, dynamic>.from(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get public plans with optional filters
+  Future<List<Map<String, dynamic>>> getPublicPlans({
+    String? searchQuery,
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      var query = _supabase
+          .from('plans')
+          .select()
+          .eq('is_public', true);
+
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+      }
+
+      var orderedQuery = query.order('created_at', ascending: false);
+
+      if (limit != null) {
+        orderedQuery = orderedQuery.limit(limit);
+      }
+
+      if (offset != null) {
+        orderedQuery = orderedQuery.range(offset, offset + (limit ?? 20) - 1);
+      }
+
+      final response = await orderedQuery;
+      final plans = List<Map<String, dynamic>>.from(response);
+      
+      // Fetch owner profiles and task counts
+      final plansWithProfiles = await Future.wait(plans.map((plan) async {
+        final userId = plan['user_id'] as String?;
+        final planId = plan['id'] as String?;
+        
+        // Fetch owner profile
+        if (userId != null) {
+          try {
+            final profile = await _supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .eq('id', userId)
+                .maybeSingle();
+            plan['profiles'] = profile;
+          } catch (e) {
+            plan['profiles'] = null;
+          }
+        } else {
+          plan['profiles'] = null;
+        }
+        
+        // Fetch task count
+        if (planId != null) {
+          try {
+            final tasksResponse = await _supabase
+                .from('tasks')
+                .select('id')
+                .eq('plan_id', planId);
+            plan['task_count'] = (tasksResponse as List).length;
+          } catch (e) {
+            plan['task_count'] = 0;
+          }
+        }
+        
+        return plan;
+      }));
+      
+      return plansWithProfiles;
     } catch (e) {
       rethrow;
     }

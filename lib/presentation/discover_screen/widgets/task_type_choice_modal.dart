@@ -5,15 +5,19 @@ import '../../../core/app_export.dart';
 
 /// Task Type Choice Modal
 /// 
-/// Shows a modal to choose between creating a private or public task
+/// Shows a modal to choose between creating a private or public task, or a private or public plan
 class TaskTypeChoiceModal extends StatelessWidget {
   final VoidCallback onPrivateSelected;
   final VoidCallback onPublicSelected;
+  final VoidCallback? onPrivatePlanSelected;
+  final VoidCallback? onPublicPlanSelected;
 
   const TaskTypeChoiceModal({
     super.key,
     required this.onPrivateSelected,
     required this.onPublicSelected,
+    this.onPrivatePlanSelected,
+    this.onPublicPlanSelected,
   });
 
   @override
@@ -22,14 +26,19 @@ class TaskTypeChoiceModal extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: EdgeInsets.all(6.w),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(6.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
           Container(
             width: 12.w,
             height: 1.h,
@@ -40,7 +49,7 @@ class TaskTypeChoiceModal extends StatelessWidget {
           ),
           SizedBox(height: 3.h),
           Text(
-            'Create Task',
+            'Create',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -69,8 +78,44 @@ class TaskTypeChoiceModal extends StatelessWidget {
             onTap: onPublicSelected,
           ),
           
+          // Plan Options (if callbacks provided)
+          if (onPrivatePlanSelected != null || onPublicPlanSelected != null) ...[
+            SizedBox(height: 3.h),
+            Divider(
+              color: colorScheme.outline.withValues(alpha: 0.3),
+              thickness: 1,
+            ),
+            SizedBox(height: 2.h),
+            
+            if (onPrivatePlanSelected != null) ...[
+              // Private Plan Option
+              _buildOption(
+                context,
+                icon: 'event',
+                title: 'Create Private Plan',
+                description: 'Organize multiple tasks in one plan',
+                color: Colors.blue,
+                onTap: onPrivatePlanSelected!,
+              ),
+              SizedBox(height: 2.h),
+            ],
+            
+            if (onPublicPlanSelected != null)
+              // Public Plan Option
+              _buildOption(
+                context,
+                icon: 'event',
+                title: 'Create Public Plan',
+                description: 'Share your plan with the community',
+                color: Colors.yellow.shade700,
+                onTap: onPublicPlanSelected!,
+              ),
+          ],
+          
           SizedBox(height: 4.h),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

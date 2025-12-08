@@ -71,7 +71,12 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
 
     _xpController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        widget.onAnimationComplete?.call();
+        // Wait a bit before dismissing to let users see the full celebration
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            widget.onAnimationComplete?.call();
+          }
+        });
       }
     });
   }
@@ -80,7 +85,14 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
   void didUpdateWidget(CelebrationOverlayWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isVisible && !oldWidget.isVisible) {
+      // Reset animations before starting
+      _confettiController.reset();
+      _xpController.reset();
       _startCelebration();
+    } else if (!widget.isVisible && oldWidget.isVisible) {
+      // Reset animations when hiding
+      _confettiController.reset();
+      _xpController.reset();
     }
   }
 
@@ -164,12 +176,22 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
                             ),
                             SizedBox(height: 0.5.h),
                             Text(
-                              '+${widget.xpGained} XP',
+                              'Congrats!',
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            if (widget.xpGained > 0) ...[
+                              SizedBox(height: 0.5.h),
+                              Text(
+                                '+${widget.xpGained} XP',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
