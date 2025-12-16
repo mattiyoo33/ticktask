@@ -38,25 +38,9 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: CustomAppBar(
-        title: 'Plans',
-        variant: CustomAppBarVariant.standard,
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/plan-creation-screen');
-              HapticFeedback.lightImpact();
-            },
-            icon: CustomIconWidget(
-              iconName: 'add',
-              color: colorScheme.onSurface,
-              size: 24,
-            ),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
         onRefresh: _refreshPlans,
         child: plansAsync.when(
           data: (plans) {
@@ -125,6 +109,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               ],
             ),
           ),
+        ),
         ),
       ),
       bottomNavigationBar: const CustomBottomBar(currentIndex: 3),

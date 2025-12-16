@@ -71,9 +71,9 @@ class CustomBottomBar extends StatelessWidget {
       onTap!(index);
     }
 
-    // Navigate to the selected route
+    // Navigate to the selected route with replacement (no stacking)
     if (index != currentIndex && index < _navItems.length) {
-      Navigator.pushNamed(context, _navItems[index].route);
+      Navigator.pushReplacementNamed(context, _navItems[index].route);
     }
   }
 

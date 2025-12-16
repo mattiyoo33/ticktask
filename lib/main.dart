@@ -69,6 +69,51 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         routes: AppRoutes.routes,
         initialRoute: AppRoutes.initial,
+        onGenerateRoute: (settings) {
+          // Custom slide transition for bottom nav routes
+          final routeName = settings.name;
+          final bottomNavRoutes = [
+            '/home-dashboard',
+            '/discover-screen',
+            '/task-list-screen',
+            '/plans-screen',
+            '/more-screen',
+          ];
+          
+          if (bottomNavRoutes.contains(routeName)) {
+            final builder = AppRoutes.routes[routeName];
+            if (builder != null) {
+              return PageRouteBuilder(
+                settings: settings,
+                pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  // Slide transition from right to left
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1.0, 0.0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeInOut,
+                    )),
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 300),
+              );
+            }
+          }
+          
+          // Default route handling
+          final builder = AppRoutes.routes[routeName];
+          if (builder != null) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: builder,
+            );
+          }
+          return null;
+        },
       );
     });
   }

@@ -955,23 +955,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: CustomAppBar(
-        title: 'My Tasks',
-        variant: CustomAppBarVariant.standard,
-        centerTitle: false,
-        actions: [
-          if (!_isMultiSelectMode)
-            IconButton(
-              onPressed: () => _showTaskTypeChoice(context),
-              icon: CustomIconWidget(
-                iconName: 'add',
-                color: colorScheme.onSurface,
-                size: 24,
-              ),
-            ),
-        ],
-      ),
-      body: Column(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
         children: [
           // Search and Filter Bar
           if (!_isMultiSelectMode)
@@ -1145,6 +1131,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
             ),
           ),
         ],
+        ),
       ),
       bottomNavigationBar: const CustomBottomBar(currentIndex: 2),
       floatingActionButton: !_isMultiSelectMode

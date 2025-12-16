@@ -21,12 +21,9 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: CustomAppBar(
-        title: 'More',
-        variant: CustomAppBarVariant.standard,
-        centerTitle: false,
-      ),
-      body: ListView(
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
         padding: EdgeInsets.all(4.w),
         children: [
           // Profile Section
@@ -71,6 +68,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           ),
           SizedBox(height: 4.h),
         ],
+        ),
       ),
       bottomNavigationBar: const CustomBottomBar(
         currentIndex: 4, // More tab

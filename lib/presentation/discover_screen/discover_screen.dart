@@ -83,10 +83,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
 
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Discover',
-      ),
-      body: Column(
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
         children: [
           // Search Bar
           Container(
@@ -380,6 +380,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             ),
           ),
         ],
+        ),
       ),
       bottomNavigationBar: const CustomBottomBar(
         currentIndex: 1,
