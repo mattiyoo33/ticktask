@@ -158,6 +158,7 @@ class PlanService {
     String? startTime,
     String? endTime,
     bool isPublic = false,
+    String? categoryId,
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -170,6 +171,7 @@ class PlanService {
         'start_time': startTime,
         'end_time': endTime,
         'is_public': isPublic,
+        if (categoryId != null) 'category_id': categoryId,
       };
 
       final response = await _supabase
@@ -193,7 +195,10 @@ class PlanService {
     try {
       var query = _supabase
           .from('plans')
-          .select()
+          .select('''
+            *,
+            categories:category_id(*)
+          ''')
           .eq('is_public', true);
 
       if (searchQuery != null && searchQuery.isNotEmpty) {

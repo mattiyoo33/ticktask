@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../task_creation_screen/widgets/category_selection_widget.dart';
 
 class PlanCreationScreen extends ConsumerStatefulWidget {
   const PlanCreationScreen({super.key});
@@ -26,6 +27,7 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
   TimeOfDay? _endTime;
   bool _isLoading = false;
   bool _isPublicPlan = false;
+  String? _selectedCategoryId; // Category ID for public plans
 
   @override
   void initState() {
@@ -126,6 +128,18 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Validate category selection for public plans
+      if (_isPublicPlan && _selectedCategoryId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please select a category for your public plan'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final planService = ref.read(planServiceProvider);
       final plan = await planService.createPlan(
         title: _titleController.text.trim(),
@@ -136,6 +150,7 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
         startTime: _startTime != null ? _formatTimeOfDay(_startTime!) : null,
         endTime: _endTime != null ? _formatTimeOfDay(_endTime!) : null,
         isPublic: _isPublicPlan,
+        categoryId: _isPublicPlan ? _selectedCategoryId : null,
       );
 
       ref.invalidate(allPlansProvider);
@@ -332,6 +347,20 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
               textCapitalization: TextCapitalization.sentences,
             ),
             SizedBox(height: 3.h),
+            
+            // Category Selection (only for public plans)
+            if (_isPublicPlan) ...[
+              CategorySelectionWidget(
+                selectedCategoryId: _selectedCategoryId,
+                onCategorySelected: (categoryId) {
+                  setState(() {
+                    _selectedCategoryId = categoryId;
+                  });
+                },
+              ),
+              SizedBox(height: 3.h),
+            ],
+            
             // Date Selection
             InkWell(
               onTap: _selectDate,

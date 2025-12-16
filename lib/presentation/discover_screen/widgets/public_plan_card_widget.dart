@@ -28,6 +28,9 @@ class PublicPlanCardWidget extends StatelessWidget {
     final planDate = plan['plan_date'] as String?;
     final startTime = plan['start_time'] as String?;
     final endTime = plan['end_time'] as String?;
+    final category = plan['categories'] as Map<String, dynamic>?;
+    final categoryName = category?['name'] as String? ?? 'Uncategorized';
+    final categoryIcon = category?['icon'] as String? ?? 'category';
     final owner = plan['profiles'] as Map<String, dynamic>?;
     final ownerName = owner?['full_name'] as String? ?? 'Unknown';
     final ownerAvatar = owner?['avatar_url'] as String? ?? '';
@@ -56,8 +59,7 @@ class PublicPlanCardWidget extends StatelessWidget {
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.yellow.shade700.withValues(alpha: 0.3),
-            width: 2,
+            color: colorScheme.outline.withValues(alpha: 0.1),
           ),
           boxShadow: [
             BoxShadow(
@@ -70,28 +72,28 @@ class PublicPlanCardWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Plan Badge and Task Count
+            // Header: Category and Task Count
             Row(
               children: [
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
                   decoration: BoxDecoration(
-                    color: Colors.yellow.shade700.withValues(alpha: 0.2),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CustomIconWidget(
-                        iconName: 'event',
-                        color: Colors.yellow.shade700,
+                        iconName: categoryIcon,
+                        color: colorScheme.primary,
                         size: 4.w,
                       ),
                       SizedBox(width: 1.w),
                       Text(
-                        'Plan',
+                        categoryName,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.yellow.shade700,
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -143,26 +145,6 @@ class PublicPlanCardWidget extends StatelessWidget {
               ),
             ],
             
-            if (dateTimeText.isNotEmpty) ...[
-              SizedBox(height: 1.h),
-              Row(
-                children: [
-                  CustomIconWidget(
-                    iconName: 'schedule',
-                    color: colorScheme.onSurfaceVariant,
-                    size: 4.w,
-                  ),
-                  SizedBox(width: 1.w),
-                  Text(
-                    dateTimeText,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            
             SizedBox(height: 2.h),
             
             // Footer: Owner Info
@@ -205,7 +187,7 @@ class PublicPlanCardWidget extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
                   decoration: BoxDecoration(
-                    color: Colors.yellow.shade700.withValues(alpha: 0.2),
+                    color: colorScheme.secondaryContainer,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -213,14 +195,14 @@ class PublicPlanCardWidget extends StatelessWidget {
                     children: [
                       CustomIconWidget(
                         iconName: 'public',
-                        color: Colors.yellow.shade700,
+                        color: colorScheme.secondary,
                         size: 4.w,
                       ),
                       SizedBox(width: 1.w),
                       Text(
                         'Public',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.yellow.shade700,
+                          color: colorScheme.secondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
