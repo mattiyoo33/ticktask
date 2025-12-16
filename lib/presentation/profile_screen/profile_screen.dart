@@ -206,7 +206,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
       bottomNavigationBar: const CustomBottomBar(
-        currentIndex: 5, // Profile tab
+        currentIndex: 4, // More tab
         variant: CustomBottomBarVariant.standard,
       ),
     );

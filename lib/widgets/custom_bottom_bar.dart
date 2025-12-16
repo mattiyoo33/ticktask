@@ -56,16 +56,10 @@ class CustomBottomBar extends StatelessWidget {
       route: '/plans-screen',
     ),
     _BottomNavItem(
-      icon: Icons.people_outline,
-      selectedIcon: Icons.people,
-      label: 'Friends',
-      route: '/friends-screen',
-    ),
-    _BottomNavItem(
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-      label: 'Profile',
-      route: '/profile-screen',
+      icon: Icons.more_horiz_outlined,
+      selectedIcon: Icons.more_horiz,
+      label: 'More',
+      route: '/more-screen',
     ),
   ];
 
