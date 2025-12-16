@@ -5,19 +5,15 @@ import '../../../core/app_export.dart';
 
 /// Task Type Choice Modal
 /// 
-/// Shows a modal to choose between creating a private or public task, or a private or public plan
+/// Shows a modal to choose between creating a task or a plan
 class TaskTypeChoiceModal extends StatelessWidget {
-  final VoidCallback onPrivateSelected;
-  final VoidCallback onPublicSelected;
-  final VoidCallback? onPrivatePlanSelected;
-  final VoidCallback? onPublicPlanSelected;
+  final VoidCallback onTaskSelected;
+  final VoidCallback onPlanSelected;
 
   const TaskTypeChoiceModal({
     super.key,
-    required this.onPrivateSelected,
-    required this.onPublicSelected,
-    this.onPrivatePlanSelected,
-    this.onPublicPlanSelected,
+    required this.onTaskSelected,
+    required this.onPlanSelected,
   });
 
   @override
@@ -54,63 +50,34 @@ class TaskTypeChoiceModal extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: 3.h),
+          SizedBox(height: 4.h),
           
-          // Private Task Option
-          _buildOption(
-            context,
-            icon: 'lock',
-            title: 'Private Task',
-            description: 'Create a personal task or invite friends',
-            color: colorScheme.primary,
-            onTap: onPrivateSelected,
-          ),
-          
-          SizedBox(height: 2.h),
-          
-          // Public Task Option
-          _buildOption(
-            context,
-            icon: 'public',
-            title: 'Public Task',
-            description: 'Share with the community and let anyone join',
-            color: colorScheme.secondary,
-            onTap: onPublicSelected,
-          ),
-          
-          // Plan Options (if callbacks provided)
-          if (onPrivatePlanSelected != null || onPublicPlanSelected != null) ...[
-            SizedBox(height: 3.h),
-            Divider(
-              color: colorScheme.outline.withValues(alpha: 0.3),
-              thickness: 1,
-            ),
-            SizedBox(height: 2.h),
-            
-            if (onPrivatePlanSelected != null) ...[
-              // Private Plan Option
-              _buildOption(
-                context,
-                icon: 'event',
-                title: 'Create Private Plan',
-                description: 'Organize multiple tasks in one plan',
-                color: Colors.blue,
-                onTap: onPrivatePlanSelected!,
+          // Task and Plan Options side by side
+          Row(
+            children: [
+              Expanded(
+                child: _buildOption(
+                  context,
+                  icon: 'checklist',
+                  title: 'Task',
+                  description: 'Create a task',
+                  color: colorScheme.primary,
+                  onTap: onTaskSelected,
+                ),
               ),
-              SizedBox(height: 2.h),
+              SizedBox(width: 3.w),
+              Expanded(
+                child: _buildOption(
+                  context,
+                  icon: 'event',
+                  title: 'Plan',
+                  description: 'Create a plan',
+                  color: colorScheme.secondary,
+                  onTap: onPlanSelected,
+                ),
+              ),
             ],
-            
-            if (onPublicPlanSelected != null)
-              // Public Plan Option
-              _buildOption(
-                context,
-                icon: 'event',
-                title: 'Create Public Plan',
-                description: 'Share your plan with the community',
-                color: Colors.yellow.shade700,
-                onTap: onPublicPlanSelected!,
-              ),
-          ],
+          ),
           
           SizedBox(height: 4.h),
             ],
@@ -133,7 +100,7 @@ class TaskTypeChoiceModal extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.pop(context);
+        // Execute callback first - it will handle closing the modal
         onTap();
       },
       child: Container(
@@ -146,11 +113,12 @@ class TaskTypeChoiceModal extends StatelessWidget {
             width: 2,
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 12.w,
-              height: 12.w,
+              width: 16.w,
+              height: 16.w,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
@@ -159,36 +127,25 @@ class TaskTypeChoiceModal extends StatelessWidget {
                 child: CustomIconWidget(
                   iconName: icon,
                   color: color,
-                  size: 6.w,
+                  size: 8.w,
                 ),
               ),
             ),
-            SizedBox(width: 4.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                  SizedBox(height: 0.5.h),
-                  Text(
-                    description,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+            SizedBox(height: 2.h),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: color,
               ),
             ),
-            CustomIconWidget(
-              iconName: 'chevron_right',
-              color: color,
-              size: 5.w,
+            SizedBox(height: 0.5.h),
+            Text(
+              description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

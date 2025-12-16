@@ -692,31 +692,33 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
   }
 
   void _showTaskTypeChoice(BuildContext context) {
+    HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
       ),
-      builder: (context) => TaskTypeChoiceModal(
-        onPrivateSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': false});
+      builder: (modalContext) => TaskTypeChoiceModal(
+        onTaskSelected: () async {
+          Navigator.pop(modalContext); // Close modal first
+          // Wait a bit to ensure modal is fully closed
+          await Future.delayed(const Duration(milliseconds: 150));
+          if (context.mounted) {
+            Navigator.pushNamed(context, '/task-creation-screen');
+          }
         },
-        onPublicSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': true});
-        },
-        onPrivatePlanSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': false});
-        },
-        onPublicPlanSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': true});
+        onPlanSelected: () async {
+          Navigator.pop(modalContext); // Close modal first
+          // Wait a bit to ensure modal is fully closed
+          await Future.delayed(const Duration(milliseconds: 150));
+          if (context.mounted) {
+            Navigator.pushNamed(context, '/plan-creation-screen');
+          }
         },
       ),
     );
-    HapticFeedback.lightImpact();
   }
 
   Future<void> _handleRefuseInvitation(String taskId) async {

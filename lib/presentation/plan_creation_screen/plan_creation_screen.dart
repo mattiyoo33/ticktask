@@ -30,16 +30,7 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
   @override
   void initState() {
     super.initState();
-    // Read arguments after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args is Map<String, dynamic>) {
-        final isPublic = args['isPublic'] as bool? ?? false;
-        setState(() {
-          _isPublicPlan = isPublic;
-        });
-      }
-    });
+    // No need to check arguments anymore - user can toggle public/private on the screen
   }
 
   @override
@@ -187,16 +178,117 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: CustomAppBar(
-        title: _isPublicPlan ? 'Create Public Plan' : 'Create Private Plan',
+        title: 'Create Plan',
         variant: CustomAppBarVariant.standard,
         centerTitle: false,
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.all(4.w),
+        child: Column(
           children: [
-            SizedBox(height: 2.h),
+            // Public/Private Toggle
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isPublicPlan = false;
+                        });
+                        HapticFeedback.lightImpact();
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: !_isPublicPlan
+                              ? colorScheme.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CustomIconWidget(
+                              iconName: 'lock',
+                              color: !_isPublicPlan
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurfaceVariant,
+                              size: 5.w,
+                            ),
+                            SizedBox(width: 2.w),
+                            Text(
+                              'Private',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: !_isPublicPlan
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: !_isPublicPlan
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isPublicPlan = true;
+                        });
+                        HapticFeedback.lightImpact();
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: _isPublicPlan
+                              ? colorScheme.secondary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CustomIconWidget(
+                              iconName: 'public',
+                              color: _isPublicPlan
+                                  ? colorScheme.onSecondary
+                                  : colorScheme.onSurfaceVariant,
+                              size: 5.w,
+                            ),
+                            SizedBox(width: 2.w),
+                            Text(
+                              'Public',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: _isPublicPlan
+                                    ? colorScheme.onSecondary
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: _isPublicPlan
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.all(4.w),
+                children: [
+                  SizedBox(height: 2.h),
             // Title Field
             TextFormField(
               controller: _titleController,
@@ -449,6 +541,9 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
               ),
             ),
             SizedBox(height: 2.h),
+                ],
+              ),
+            ),
           ],
         ),
       ),

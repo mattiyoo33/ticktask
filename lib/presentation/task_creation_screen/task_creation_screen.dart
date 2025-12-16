@@ -75,57 +75,39 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   }
 
   void _checkArguments() {
-    if (!mounted) return;
+    if (!mounted || _hasCheckedArguments) return;
     
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, dynamic>) {
-      // Arguments are present - set the state and don't show modal
-      final isPublic = args['isPublic'] as bool? ?? false;
+      // Check for planId if task is being added to a plan
       final planId = args['planId'] as String?;
-      setState(() {
-        _isPublicTask = isPublic;
-        _planId = planId;
-        _hasCheckedArguments = true;
-      });
-    } else {
-      // No arguments passed - show the choice modal after first frame
-      _hasCheckedArguments = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showTaskTypeChoice();
-        }
-      });
+      if (planId != null) {
+        setState(() {
+          _planId = planId;
+        });
+      }
     }
+    // Don't show modal automatically - users come through the selection modal
+    _hasCheckedArguments = true;
   }
 
   void _showTaskTypeChoice() {
     showModalBottomSheet(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
       ),
-      builder: (context) => TaskTypeChoiceModal(
-        onPrivateSelected: () {
-          Navigator.pop(context);
-          setState(() {
-            _isPublicTask = false;
-          });
+      builder: (modalContext) => TaskTypeChoiceModal(
+        onTaskSelected: () {
+          Navigator.pop(modalContext); // Close modal, stay on task creation screen
+          // User can toggle public/private
         },
-        onPublicSelected: () {
-          Navigator.pop(context);
-          setState(() {
-            _isPublicTask = true;
-          });
-        },
-        onPrivatePlanSelected: () {
-          Navigator.pop(context);
+        onPlanSelected: () {
+          Navigator.pop(modalContext); // Close modal first
           Navigator.pop(context); // Close task creation screen
-          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': false});
-        },
-        onPublicPlanSelected: () {
-          Navigator.pop(context);
-          Navigator.pop(context); // Close task creation screen
-          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': true});
+          Navigator.pushNamed(context, '/plan-creation-screen');
         },
       ),
     );
@@ -580,11 +562,112 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         ),
         body: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: Column(
+            children: [
+              // Public/Private Toggle
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isPublicTask = false;
+                          });
+                          HapticFeedback.lightImpact();
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: !_isPublicTask
+                                ? colorScheme.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'lock',
+                                color: !_isPublicTask
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.onSurfaceVariant,
+                                size: 5.w,
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'Private',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: !_isPublicTask
+                                      ? colorScheme.onPrimary
+                                      : colorScheme.onSurfaceVariant,
+                                  fontWeight: !_isPublicTask
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isPublicTask = true;
+                          });
+                          HapticFeedback.lightImpact();
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: _isPublicTask
+                                ? colorScheme.secondary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'public',
+                                color: _isPublicTask
+                                    ? colorScheme.onSecondary
+                                    : colorScheme.onSurfaceVariant,
+                                size: 5.w,
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'Public',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: _isPublicTask
+                                      ? colorScheme.onSecondary
+                                      : colorScheme.onSurfaceVariant,
+                                  fontWeight: _isPublicTask
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(4.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                 // AI Task Generator
                 AITaskGeneratorWidget(
                   onTaskGenerated: _onAITaskGenerated,
@@ -873,8 +956,11 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                   ),
                 ),
                 SizedBox(height: 4.h),
-              ],
-            ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
