@@ -52,6 +52,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           status = 'overdue';
         }
         
+        // Extract plan information
+        final planData = task['plans'] as Map<String, dynamic>?;
+        final planId = task['plan_id'] as String?;
+        final planTitle = planData?['title'] as String?;
+        
         return {
           'id': task['id'].toString(),
           'title': task['title'] ?? '',
@@ -66,6 +71,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           'xpReward': task['xp_reward'] ?? 10,
           'category': task['category'] ?? '',
           'createdAt': createdAt,
+          'plan_id': planId,
+          'plan_title': planTitle,
         };
         }).toList();
       },

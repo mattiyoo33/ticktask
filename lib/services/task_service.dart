@@ -25,12 +25,14 @@ class TaskService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      // Get tasks owned by user (exclude plan tasks)
+      // Get tasks owned by user (include plan tasks with plan info)
       var ownedTasksQuery = _supabase
           .from('tasks')
-          .select()
-          .eq('user_id', _userId!)
-          .isFilter('plan_id', null); // Exclude tasks that belong to a plan
+          .select('''
+            *,
+            plans:plan_id(id, title)
+          ''')
+          .eq('user_id', _userId!);
 
       if (status != null) {
         ownedTasksQuery = ownedTasksQuery.eq('status', status);
@@ -98,7 +100,10 @@ class TaskService {
       if (publicTaskIds.isNotEmpty) {
         var publicQuery = _supabase
             .from('tasks')
-            .select()
+            .select('''
+              *,
+              plans:plan_id(id, title)
+            ''')
             .inFilter('id', publicTaskIds)
             .eq('is_public', true);
         

@@ -39,6 +39,9 @@ class TaskCardWidget extends StatelessWidget {
     final isOverdue = task['status'] == 'overdue';
     final isCollaborative = task['is_collaborative'] == true;
     final isPublic = task['is_public'] == true;
+    final planId = task['plan_id'] as String?;
+    final planTitle = task['plan_title'] as String?;
+    final hasPlan = planId != null && planTitle != null;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -126,40 +129,42 @@ class TaskCardWidget extends StatelessWidget {
               onSelectionChanged!(true);
             }
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? colorScheme.primary.withValues(alpha: 0.1)
-                  : isPublic
-                      ? Colors.green.withValues(alpha: 0.1)
-                  : colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(color: colorScheme.primary, width: 2)
-                  : isPublic
-                      ? Border.all(
-                          color: Colors.green.withValues(alpha: 0.4),
-                          width: 1.5,
-                        )
-                  : Border.all(
-                      color: colorScheme.outline.withValues(alpha: 0.2)),
-              boxShadow: [
-                BoxShadow(
-                  color: isPublic
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : colorScheme.shadow.withValues(alpha: 0.1),
-                  offset: const Offset(0, 2),
-                  blurRadius: 8,
-                  spreadRadius: 0,
+          child: Stack(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colorScheme.primary.withValues(alpha: 0.1)
+                      : isPublic
+                          ? Colors.green.withValues(alpha: 0.1)
+                      : colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: isSelected
+                      ? Border.all(color: colorScheme.primary, width: 2)
+                      : isPublic
+                          ? Border.all(
+                              color: Colors.green.withValues(alpha: 0.4),
+                              width: 1.5,
+                            )
+                      : Border.all(
+                          color: colorScheme.outline.withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isPublic
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : colorScheme.shadow.withValues(alpha: 0.1),
+                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(4.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                child: Padding(
+                  padding: EdgeInsets.all(4.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   Row(
                     children: [
                       if (isMultiSelectMode) ...[
@@ -360,11 +365,59 @@ class TaskCardWidget extends StatelessWidget {
               ),
             ),
           ),
-        ),
+          // Plan indicator (book index style) - positioned on top-right
+          if (hasPlan)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+                decoration: BoxDecoration(
+                  color: colorScheme.tertiaryContainer,
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(12),
+                    bottomLeft: Radius.circular(8),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.shadow.withValues(alpha: 0.1),
+                      offset: const Offset(0, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomIconWidget(
+                      iconName: 'bookmark',
+                      color: colorScheme.onTertiaryContainer,
+                      size: 12,
+                    ),
+                    SizedBox(width: 1.w),
+                    Flexible(
+                      child: Text(
+                        planTitle!,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onTertiaryContainer,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 9.sp,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
+    ),
+    ),
     );
   }
-
+  
   Widget _buildDifficultyBadge(BuildContext context) {
     final theme = Theme.of(context);
     final difficulty = task['difficulty']?.toLowerCase() ?? 'easy';
