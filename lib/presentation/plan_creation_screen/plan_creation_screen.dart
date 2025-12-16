@@ -285,10 +285,10 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.all(4.w),
-                children: [
-                  SizedBox(height: 2.h),
+        child: ListView(
+          padding: EdgeInsets.all(4.w),
+          children: [
+            SizedBox(height: 2.h),
             // Title Field
             TextFormField(
               controller: _titleController,

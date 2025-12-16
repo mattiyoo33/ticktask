@@ -771,6 +771,120 @@ class TaskService {
     }
   }
 
+  // Get today's completion record for a task (if exists)
+  Future<Map<String, dynamic>?> getTodayCompletion(String taskId) async {
+    if (_userId == null) return null;
+
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final completions = await _supabase
+          .from('task_completions')
+          .select('id, xp_gained, completed_at')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .gte('completed_at', startOfDay.toIso8601String())
+          .lt('completed_at', endOfDay.toIso8601String())
+          .limit(1)
+          .maybeSingle();
+
+      return completions;
+    } catch (e) {
+      debugPrint('Error getting today completion: $e');
+      return null;
+    }
+  }
+
+  // Revert/undo task completion for today
+  // This removes the completion record and reverses the XP gain
+  Future<void> revertTaskCompletion(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // Get task info
+      final task = await getTaskById(taskId);
+      if (task == null) throw Exception('Task not found');
+
+      final taskOwnerId = task['user_id'] as String?;
+      final planId = task['plan_id'] as String?;
+      final isOwner = taskOwnerId == _userId;
+      final isPublicPlanTask = planId != null && !isOwner;
+
+      // Get today's completion record
+      final completion = await getTodayCompletion(taskId);
+      if (completion == null) {
+        throw Exception('No completion found for today. Nothing to revert.');
+      }
+
+      final completionId = completion['id'] as String;
+      final xpGained = completion['xp_gained'] as int? ?? 0;
+
+      // Delete the completion record
+      await _supabase
+          .from('task_completions')
+          .delete()
+          .eq('id', completionId)
+          .eq('user_id', _userId!);
+
+      // Verify deletion was successful by checking if record still exists
+      await Future.delayed(const Duration(milliseconds: 100)); // Small delay for database consistency
+      final verifyCompletion = await getTodayCompletion(taskId);
+      if (verifyCompletion != null) {
+        debugPrint('⚠️ Warning: Completion record still exists after deletion attempt');
+        throw Exception('Failed to delete completion record. Please try again.');
+      }
+
+      // Revert XP (subtract the XP that was gained)
+      // Note: The database trigger should handle this, but we'll also update manually
+      // to ensure consistency. The trigger might not fire on delete, so we need to handle XP reversal.
+      if (xpGained > 0) {
+        // Get current user XP
+        final userProfile = await _supabase
+            .from('profiles')
+            .select('current_xp')
+            .eq('id', _userId!)
+            .single();
+
+        final currentXp = userProfile['current_xp'] as int? ?? 0;
+        final newXp = (currentXp - xpGained).clamp(0, double.infinity).toInt();
+
+        // Update user XP
+        await _supabase
+            .from('profiles')
+            .update({'current_xp': newXp})
+            .eq('id', _userId!);
+      }
+
+      // Revert task status if user is the owner (only for non-public-plan tasks)
+      if (isOwner && !isPublicPlanTask) {
+        await updateTask(taskId, status: 'active');
+      }
+
+      // Create activity record for the revert
+      await _supabase.from('activities').insert({
+        'user_id': _userId!,
+        'type': 'task_reverted',
+        'task_id': taskId,
+        'message': "reverted completion of '${task['title']}'",
+        'xp_gained': -xpGained, // Negative to show XP was removed
+      });
+
+      // Final verification: ensure completion record is gone
+      final finalCheck = await getTodayCompletion(taskId);
+      if (finalCheck != null) {
+        debugPrint('⚠️ Warning: Completion record still exists after deletion attempt');
+        throw Exception('Completion record was not fully deleted. Please refresh and try again.');
+      }
+
+      debugPrint('✅ Task completion reverted successfully');
+    } catch (e) {
+      debugPrint('❌ Error reverting task completion: $e');
+      rethrow;
+    }
+  }
+
   // Get task streak data
   Future<Map<String, dynamic>?> getTaskStreak(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');

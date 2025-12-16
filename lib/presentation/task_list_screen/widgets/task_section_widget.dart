@@ -12,6 +12,7 @@ class TaskSectionWidget extends StatelessWidget {
   final Function(String taskId, bool isSelected)? onTaskSelectionChanged;
   final Function(Map<String, dynamic> task)? onTaskTap;
   final Function(Map<String, dynamic> task)? onTaskComplete;
+  final Function(Map<String, dynamic> task)? onTaskRevert;
   final Function(Map<String, dynamic> task)? onTaskEdit;
   final Function(Map<String, dynamic> task)? onTaskDelete;
   final Function(Map<String, dynamic> task)? onTaskShare;
@@ -26,6 +27,7 @@ class TaskSectionWidget extends StatelessWidget {
     this.onTaskSelectionChanged,
     this.onTaskTap,
     this.onTaskComplete,
+    this.onTaskRevert,
     this.onTaskEdit,
     this.onTaskDelete,
     this.onTaskShare,
@@ -88,6 +90,7 @@ class TaskSectionWidget extends StatelessWidget {
               isMultiSelectMode: isMultiSelectMode,
               onTap: () => onTaskTap?.call(task),
               onComplete: () => onTaskComplete?.call(task),
+              onRevert: () => onTaskRevert?.call(task),
               onEdit: () => onTaskEdit?.call(task),
               onDelete: () => onTaskDelete?.call(task),
               onShare: () => onTaskShare?.call(task),

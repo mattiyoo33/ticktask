@@ -11,6 +11,7 @@ class PlanTaskItemWidget extends StatelessWidget {
   final int index;
   final VoidCallback? onTap;
   final VoidCallback? onComplete;
+  final VoidCallback? onRevert;
 
   const PlanTaskItemWidget({
     super.key,
@@ -18,6 +19,7 @@ class PlanTaskItemWidget extends StatelessWidget {
     required this.index,
     this.onTap,
     this.onComplete,
+    this.onRevert,
   });
 
   String _formatDueTime(String? dueTime) {
@@ -128,8 +130,18 @@ class PlanTaskItemWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              // Status Indicator
-              if (isCompleted)
+              // Status Indicator / Action Buttons
+              if (isCompleted && onRevert != null)
+                IconButton(
+                  onPressed: onRevert,
+                  icon: Icon(
+                    Icons.undo,
+                    color: colorScheme.error,
+                    size: 24,
+                  ),
+                  tooltip: 'Revert completion',
+                )
+              else if (isCompleted)
                 Container(
                   padding: EdgeInsets.all(1.w),
                   decoration: BoxDecoration(
@@ -150,6 +162,7 @@ class PlanTaskItemWidget extends StatelessWidget {
                     color: colorScheme.primary,
                     size: 24,
                   ),
+                  tooltip: 'Mark as complete',
                 ),
             ],
           ),

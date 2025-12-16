@@ -9,6 +9,7 @@ class TaskCardWidget extends StatelessWidget {
   final Map<String, dynamic> task;
   final VoidCallback? onTap;
   final VoidCallback? onComplete;
+  final VoidCallback? onRevert;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onShare;
@@ -21,6 +22,7 @@ class TaskCardWidget extends StatelessWidget {
     required this.task,
     this.onTap,
     this.onComplete,
+    this.onRevert,
     this.onEdit,
     this.onDelete,
     this.onShare,
@@ -45,17 +47,30 @@ class TaskCardWidget extends StatelessWidget {
         startActionPane: ActionPane(
           motion: const ScrollMotion(),
           children: [
-            SlidableAction(
-              onPressed: (context) {
-                HapticFeedback.mediumImpact();
-                if (onComplete != null) onComplete!();
-              },
-              backgroundColor: AppTheme.lightTheme.colorScheme.secondary,
-              foregroundColor: Colors.white,
-              icon: Icons.check,
-              label: 'Complete',
-              borderRadius: BorderRadius.circular(12),
-            ),
+            if (isCompleted && onRevert != null)
+              SlidableAction(
+                onPressed: (context) {
+                  HapticFeedback.mediumImpact();
+                  if (onRevert != null) onRevert!();
+                },
+                backgroundColor: AppTheme.lightTheme.colorScheme.error,
+                foregroundColor: Colors.white,
+                icon: Icons.undo,
+                label: 'Revert',
+                borderRadius: BorderRadius.circular(12),
+              )
+            else if (!isCompleted && onComplete != null)
+              SlidableAction(
+                onPressed: (context) {
+                  HapticFeedback.mediumImpact();
+                  if (onComplete != null) onComplete!();
+                },
+                backgroundColor: AppTheme.lightTheme.colorScheme.secondary,
+                foregroundColor: Colors.white,
+                icon: Icons.check,
+                label: 'Complete',
+                borderRadius: BorderRadius.circular(12),
+              ),
           ],
         ),
         endActionPane: ActionPane(

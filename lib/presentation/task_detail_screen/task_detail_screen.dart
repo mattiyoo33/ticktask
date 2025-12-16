@@ -45,6 +45,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   RealtimeChannel? _commentsChannel;
   bool _isOwner = false; // Whether current user is the task owner
   bool _isParticipant = false; // Whether current user is a participant
+  bool _userCompletedToday = false; // Whether current user completed the task today (for plan tasks)
 
   @override
   void didChangeDependencies() {
@@ -203,6 +204,20 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         }
       }
 
+      // Check if this is a task in a public plan and user has completed it today
+      final planId = task['plan_id'] as String?;
+      final isPublicPlanTask = planId != null && !isOwner;
+      bool userCompletedToday = false;
+      
+      if (isPublicPlanTask) {
+        // For public plan tasks, check user-specific completion
+        try {
+          userCompletedToday = await taskService.hasCompletedTaskToday(_taskId!);
+        } catch (e) {
+          debugPrint('Error checking user completion status: $e');
+        }
+      }
+
       setState(() {
         _taskData = task;
         _streakData = streak;
@@ -211,6 +226,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _isParticipant = isParticipant;
         _participants = _transformParticipants(participants, currentUserParticipant: currentUserParticipant);
         _comments = _transformComments(comments);
+        _userCompletedToday = userCompletedToday;
         _isInitialLoading = false;
       });
 
@@ -280,6 +296,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
   TaskStatus get _currentTaskStatus {
     if (_taskData == null) return TaskStatus.active;
+    
+    // For tasks in public plans, check user-specific completion status
+    final planId = _taskData!['plan_id'] as String?;
+    final isPublicPlanTask = planId != null && !_isOwner;
+    
+    if (isPublicPlanTask) {
+      // For public plan tasks, use user-specific completion status
+      return _userCompletedToday ? TaskStatus.completed : TaskStatus.active;
+    }
+    
+    // For owned tasks, use global task status
     switch (_taskData!['status'] as String?) {
       case 'completed':
         return TaskStatus.completed;
@@ -639,14 +666,43 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
     try {
       final taskService = ref.read(taskServiceProvider);
-      await taskService.updateTask(_taskId!, status: 'active');
       
-      // Refresh task data
+      // Check if task was completed today - if so, revert the completion
+      // Otherwise, just update the status
+      final hasCompletedToday = await taskService.hasCompletedTaskToday(_taskId!);
+      
+      if (hasCompletedToday) {
+        // Revert today's completion (removes completion record and reverses XP)
+        await taskService.revertTaskCompletion(_taskId!);
+        
+        // Small delay to ensure database has processed the deletion
+        await Future.delayed(const Duration(milliseconds: 300));
+      } else {
+        // Just update status if no completion record exists
+        await taskService.updateTask(_taskId!, status: 'active');
+      }
+      
+      // Refresh task data to update completion status
       await _loadTaskData();
       
-      // Refresh task lists
+      // Refresh task lists and streaks
       ref.invalidate(allTasksProvider);
       ref.invalidate(todaysTasksProvider);
+      ref.invalidate(overallUserStreakProvider);
+      ref.invalidate(activeStreaksProvider);
+      
+      // Also refresh plan if this task is in a plan
+      final planId = _taskData?['plan_id'] as String?;
+      if (planId != null) {
+        ref.invalidate(planByIdProvider(planId));
+      }
+      
+      // Wait for providers to refresh
+      try {
+        await ref.read(allTasksProvider.future);
+      } catch (e) {
+        debugPrint('⚠️ Error refreshing tasks after revert: $e');
+      }
       
       setState(() {
         _isLoading = false;
@@ -654,9 +710,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task marked as incomplete'),
+          SnackBar(
+            content: Text(hasCompletedToday 
+                ? '✅ Task completion reverted' 
+                : 'Task marked as incomplete'),
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -667,7 +726,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating task: ${e.toString()}'),
+            content: Text('Error reverting task: ${e.toString()}'),
             behavior: SnackBarBehavior.floating,
           ),
         );

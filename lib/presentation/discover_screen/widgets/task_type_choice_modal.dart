@@ -57,26 +57,26 @@ class TaskTypeChoiceModal extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildOption(
-                  context,
+            context,
                   icon: 'checklist',
                   title: 'Task',
                   description: 'Create a task',
-                  color: colorScheme.primary,
+            color: colorScheme.primary,
                   onTap: onTaskSelected,
-                ),
+          ),
               ),
               SizedBox(width: 3.w),
               Expanded(
                 child: _buildOption(
-                  context,
-                  icon: 'event',
+                context,
+                icon: 'event',
                   title: 'Plan',
                   description: 'Create a plan',
                   color: colorScheme.secondary,
                   onTap: onPlanSelected,
                 ),
               ),
-            ],
+          ],
           ),
           
           SizedBox(height: 4.h),
@@ -132,19 +132,19 @@ class TaskTypeChoiceModal extends StatelessWidget {
               ),
             ),
             SizedBox(height: 2.h),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-            SizedBox(height: 0.5.h),
-            Text(
-              description,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  SizedBox(height: 0.5.h),
+                  Text(
+                    description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
               textAlign: TextAlign.center,
             ),
           ],

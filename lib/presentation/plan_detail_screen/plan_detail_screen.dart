@@ -183,6 +183,52 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     }
   }
 
+  Future<void> _handleTaskRevert(String taskId) async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      await taskService.revertTaskCompletion(taskId);
+      
+      // Small delay to ensure database has processed the deletion
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      final planId = ModalRoute.of(context)?.settings.arguments as String?;
+      if (planId != null) {
+        ref.invalidate(planByIdProvider(planId));
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(todaysTasksProvider);
+        ref.invalidate(overallUserStreakProvider);
+        ref.invalidate(activeStreaksProvider);
+        
+        // Wait for plan to refresh
+        try {
+          await ref.read(planByIdProvider(planId).future);
+        } catch (e) {
+          debugPrint('⚠️ Error refreshing plan after revert: $e');
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Task completion reverted'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        _refreshPlan();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error reverting task: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   void _onCelebrationComplete() {
     setState(() {
       _showCelebration = false;
@@ -422,14 +468,17 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                             Navigator.pushNamed(
                               context,
                               '/task-detail-screen',
-                              arguments: taskId,
+                              arguments: taskWithUserStatus, // Pass the full task object, not just the ID
                             );
                             HapticFeedback.lightImpact();
                           },
-                          // Disable completion button if user already completed today
+                          // Show completion button if not completed, revert button if completed
                           onComplete: userCompletedToday 
                               ? null 
                               : () => _handleTaskComplete(taskId),
+                          onRevert: userCompletedToday
+                              ? () => _handleTaskRevert(taskId)
+                              : null,
                         );
                       },
                     );

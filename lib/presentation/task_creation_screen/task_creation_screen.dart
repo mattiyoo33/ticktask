@@ -70,17 +70,17 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
     super.didChangeDependencies();
     // Check arguments only once after dependencies are available
     if (!_hasCheckedArguments) {
-      _checkArguments();
+    _checkArguments();
     }
   }
 
   void _checkArguments() {
     if (!mounted || _hasCheckedArguments) return;
     
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic>) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
       // Check for planId if task is being added to a plan
-      final planId = args['planId'] as String?;
+        final planId = args['planId'] as String?;
       if (planId != null) {
         setState(() {
           _planId = planId;
@@ -663,11 +663,11 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                 ),
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(4.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(4.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 // AI Task Generator
                 AITaskGeneratorWidget(
                   onTaskGenerated: _onAITaskGenerated,
@@ -956,8 +956,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                   ),
                 ),
                 SizedBox(height: 4.h),
-                    ],
-                  ),
+              ],
+            ),
                 ),
               ),
             ],

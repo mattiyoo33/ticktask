@@ -290,6 +290,60 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     HapticFeedback.heavyImpact();
   }
 
+  Future<void> _handleTaskRevert(Map<String, dynamic> task) async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      final taskId = task['id'].toString();
+      
+      await taskService.revertTaskCompletion(taskId);
+      
+      // Small delay to ensure database has processed the deletion
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // Refresh task lists - wait for them to actually refresh
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
+      ref.invalidate(overallUserStreakProvider);
+      ref.invalidate(activeStreaksProvider);
+      
+      // Wait for providers to refresh
+      try {
+        await ref.read(allTasksProvider.future);
+      } catch (e) {
+        debugPrint('⚠️ Error refreshing tasks after revert: $e');
+      }
+      
+      // Update local state
+      setState(() {
+        final index = _allTasks.indexWhere((t) => t['id'] == task['id']);
+        if (index != -1) {
+          _allTasks[index]['status'] = 'active';
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Task completion reverted'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error reverting task: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   void _handleTaskEdit(Map<String, dynamic> task) {
     Navigator.pushNamed(context, '/task-creation-screen', arguments: task);
   }
@@ -982,6 +1036,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                         onTaskSelectionChanged: _handleTaskSelectionChanged,
                         onTaskTap: _handleTaskTap,
                         onTaskComplete: _handleTaskComplete,
+                        onTaskRevert: _handleTaskRevert,
                         onTaskEdit: _handleTaskEdit,
                         onTaskDelete: _handleTaskDelete,
                         onTaskShare: _handleTaskShare,
@@ -997,6 +1052,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                             onTaskSelectionChanged: _handleTaskSelectionChanged,
                             onTaskTap: _handleTaskTap,
                             onTaskComplete: _handleTaskComplete,
+                            onTaskRevert: _handleTaskRevert,
                             onTaskEdit: _handleTaskEdit,
                             onTaskDelete: _handleTaskDelete,
                             onTaskShare: _handleTaskShare,
@@ -1011,6 +1067,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                             onTaskSelectionChanged: _handleTaskSelectionChanged,
                             onTaskTap: _handleTaskTap,
                             onTaskComplete: _handleTaskComplete,
+                            onTaskRevert: _handleTaskRevert,
                             onTaskEdit: _handleTaskEdit,
                             onTaskDelete: _handleTaskDelete,
                             onTaskShare: _handleTaskShare,
@@ -1025,6 +1082,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                             onTaskSelectionChanged: _handleTaskSelectionChanged,
                             onTaskTap: _handleTaskTap,
                             onTaskComplete: _handleTaskComplete,
+                            onTaskRevert: _handleTaskRevert,
                             onTaskEdit: _handleTaskEdit,
                             onTaskDelete: _handleTaskDelete,
                             onTaskShare: _handleTaskShare,
@@ -1039,6 +1097,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
                             onTaskSelectionChanged: _handleTaskSelectionChanged,
                             onTaskTap: _handleTaskTap,
                             onTaskComplete: _handleTaskComplete,
+                            onTaskRevert: _handleTaskRevert,
                             onTaskEdit: _handleTaskEdit,
                             onTaskDelete: _handleTaskDelete,
                             onTaskShare: _handleTaskShare,
