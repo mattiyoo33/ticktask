@@ -131,19 +131,12 @@ class TaskCardWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? colorScheme.primary.withValues(alpha: 0.1)
-                  : isCollaborative
-                      ? Colors.purple.withValues(alpha: 0.1)
                   : isPublic
                       ? Colors.green.withValues(alpha: 0.1)
                   : colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
                   ? Border.all(color: colorScheme.primary, width: 2)
-                  : isCollaborative
-                      ? Border.all(
-                          color: Colors.purple.withValues(alpha: 0.4),
-                          width: 1.5,
-                        )
                   : isPublic
                       ? Border.all(
                           color: Colors.green.withValues(alpha: 0.4),
@@ -153,10 +146,8 @@ class TaskCardWidget extends StatelessWidget {
                       color: colorScheme.outline.withValues(alpha: 0.2)),
               boxShadow: [
                 BoxShadow(
-                  color: isCollaborative
-                      ? Colors.purple.withValues(alpha: 0.15)
-                      : isPublic
-                          ? Colors.green.withValues(alpha: 0.15)
+                  color: isPublic
+                      ? Colors.green.withValues(alpha: 0.15)
                       : colorScheme.shadow.withValues(alpha: 0.1),
                   offset: const Offset(0, 2),
                   blurRadius: 8,
@@ -202,8 +193,6 @@ class TaskCardWidget extends StatelessWidget {
                                 isCompleted ? TextDecoration.lineThrough : null,
                             color: isCompleted
                                 ? colorScheme.onSurfaceVariant
-                                : isCollaborative
-                                    ? Colors.purple.shade700
                                 : isPublic
                                     ? Colors.green.shade700
                                 : colorScheme.onSurface,
@@ -233,33 +222,25 @@ class TaskCardWidget extends StatelessWidget {
                   SizedBox(height: 2.h),
                   Row(
                     children: [
-                      if (isCollaborative) ...[
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 2.w, vertical: 0.5.h),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CustomIconWidget(
-                                iconName: 'lock',
-                                color: Colors.purple.shade700,
-                                size: 12,
+                      if (!isPublic) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CustomIconWidget(
+                              iconName: 'lock',
+                              color: colorScheme.onSurfaceVariant,
+                              size: 12,
+                            ),
+                            SizedBox(width: 1.w),
+                            Text(
+                              'Private',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 9.sp,
                               ),
-                              SizedBox(width: 1.w),
-                              Text(
-                                'Private',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: Colors.purple.shade700,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 9.sp,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                         SizedBox(width: 2.w),
                       ],
