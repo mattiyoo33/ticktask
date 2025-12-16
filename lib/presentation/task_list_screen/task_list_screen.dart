@@ -716,6 +716,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         },
       ),
     );
+    HapticFeedback.lightImpact();
   }
 
   Future<void> _handleRefuseInvitation(String taskId) async {
@@ -905,10 +906,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         actions: [
           if (!_isMultiSelectMode)
             IconButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/task-creation-screen');
-                HapticFeedback.lightImpact();
-              },
+              onPressed: () => _showTaskTypeChoice(context),
               icon: CustomIconWidget(
                 iconName: 'add',
                 color: colorScheme.onSurface,

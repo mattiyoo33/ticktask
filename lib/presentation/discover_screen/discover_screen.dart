@@ -10,7 +10,6 @@ import '../../widgets/custom_app_bar.dart';
 import './widgets/public_task_card_widget.dart';
 import './widgets/public_plan_card_widget.dart';
 import './widgets/category_filter_widget.dart';
-import './widgets/task_type_choice_modal.dart';
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -55,25 +54,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     });
   }
 
-  void _showTaskTypeChoice() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
-      ),
-      builder: (context) => TaskTypeChoiceModal(
-        onPrivateSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': false});
-        },
-        onPublicSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': true});
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -105,17 +85,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Discover',
-        actions: [
-          IconButton(
-            icon: CustomIconWidget(
-              iconName: 'add',
-              color: colorScheme.primary,
-              size: 24,
-            ),
-            onPressed: _showTaskTypeChoice,
-            tooltip: 'Create Task',
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -415,14 +384,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       bottomNavigationBar: const CustomBottomBar(
         currentIndex: 1,
         variant: CustomBottomBarVariant.standard,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showTaskTypeChoice,
-        child: CustomIconWidget(
-          iconName: 'add',
-          color: Colors.white,
-          size: 28,
-        ),
       ),
     );
   }

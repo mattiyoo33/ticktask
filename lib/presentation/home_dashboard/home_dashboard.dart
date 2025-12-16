@@ -10,7 +10,6 @@ import './widgets/quick_actions_widget.dart';
 import './widgets/recent_activity_widget.dart';
 import './widgets/tasker_mascot_widget.dart';
 import './widgets/todays_tasks_widget.dart';
-import '../discover_screen/widgets/task_type_choice_modal.dart';
 
 class HomeDashboard extends ConsumerStatefulWidget {
   const HomeDashboard({super.key});
@@ -207,25 +206,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     // Handle activity tap - could navigate to user profile or task details
   }
 
-  void _showTaskTypeChoice(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
-      ),
-      builder: (context) => TaskTypeChoiceModal(
-        onPrivateSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': false});
-        },
-        onPublicSelected: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/task-creation-screen', arguments: {'isPublic': true});
-        },
-      ),
-    );
-  }
-
   MascotState _getMascotState() {
     final tasks = _todaysTasks;
     final completedTasks = tasks.where((task) => task['isCompleted'] == true).length;
@@ -309,14 +289,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
       bottomNavigationBar: const CustomBottomBar(
         currentIndex: 0,
         variant: CustomBottomBarVariant.standard,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showTaskTypeChoice(context),
-        child: CustomIconWidget(
-          iconName: 'add',
-          color: Colors.white,
-          size: 28,
-        ),
       ),
     );
   }

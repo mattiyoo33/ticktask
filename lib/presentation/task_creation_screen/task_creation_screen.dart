@@ -11,6 +11,7 @@ import './widgets/recurring_task_widget.dart';
 import './widgets/ai_task_generator_widget.dart';
 import './widgets/select_collaborators_modal_widget.dart';
 import './widgets/category_selection_widget.dart';
+import '../discover_screen/widgets/task_type_choice_modal.dart';
 
 class TaskCreationScreen extends ConsumerStatefulWidget {
   const TaskCreationScreen({super.key});
@@ -51,6 +52,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   // UI state
   bool _isLoading = false;
   bool _showTemplates = true;
+  bool _hasCheckedArguments = false;
 
   // Animation controllers
   late AnimationController _saveButtonController;
@@ -61,21 +63,72 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
     super.initState();
     _initializeAnimations();
     _titleController.addListener(_validateForm);
-    _checkArguments();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check arguments only once after dependencies are available
+    if (!_hasCheckedArguments) {
+      _checkArguments();
+    }
   }
 
   void _checkArguments() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args is Map<String, dynamic>) {
-        final isPublic = args['isPublic'] as bool? ?? false;
-        final planId = args['planId'] as String?;
-        setState(() {
-          _isPublicTask = isPublic;
-          _planId = planId;
-        });
-      }
-    });
+    if (!mounted) return;
+    
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      // Arguments are present - set the state and don't show modal
+      final isPublic = args['isPublic'] as bool? ?? false;
+      final planId = args['planId'] as String?;
+      setState(() {
+        _isPublicTask = isPublic;
+        _planId = planId;
+        _hasCheckedArguments = true;
+      });
+    } else {
+      // No arguments passed - show the choice modal after first frame
+      _hasCheckedArguments = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showTaskTypeChoice();
+        }
+      });
+    }
+  }
+
+  void _showTaskTypeChoice() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
+      ),
+      builder: (context) => TaskTypeChoiceModal(
+        onPrivateSelected: () {
+          Navigator.pop(context);
+          setState(() {
+            _isPublicTask = false;
+          });
+        },
+        onPublicSelected: () {
+          Navigator.pop(context);
+          setState(() {
+            _isPublicTask = true;
+          });
+        },
+        onPrivatePlanSelected: () {
+          Navigator.pop(context);
+          Navigator.pop(context); // Close task creation screen
+          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': false});
+        },
+        onPublicPlanSelected: () {
+          Navigator.pop(context);
+          Navigator.pop(context); // Close task creation screen
+          Navigator.pushNamed(context, '/plan-creation-screen', arguments: {'isPublic': true});
+        },
+      ),
+    );
   }
 
   void _initializeAnimations() {
