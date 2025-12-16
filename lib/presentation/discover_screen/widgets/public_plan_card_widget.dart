@@ -25,6 +25,7 @@ class PublicPlanCardWidget extends StatelessWidget {
     final title = plan['title'] as String? ?? 'Untitled Plan';
     final description = plan['description'] as String? ?? '';
     final taskCount = plan['task_count'] as int? ?? 0;
+    final memberCount = plan['member_count'] as int? ?? 0;
     final planDate = plan['plan_date'] as String?;
     final startTime = plan['start_time'] as String?;
     final endTime = plan['end_time'] as String?;
@@ -105,13 +106,13 @@ class PublicPlanCardWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CustomIconWidget(
-                      iconName: 'checklist',
+                      iconName: 'group',
                       color: colorScheme.onSurfaceVariant,
                       size: 4.w,
                     ),
                     SizedBox(width: 1.w),
                     Text(
-                      '$taskCount tasks',
+                      '$memberCount',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

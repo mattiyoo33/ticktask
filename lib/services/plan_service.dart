@@ -253,6 +253,19 @@ class PlanService {
           } catch (e) {
             plan['task_count'] = 0;
           }
+          
+          // Fetch member count (participants who joined the public plan)
+          try {
+            final participantsResponse = await _supabase
+                .from('public_plan_participants')
+                .select('id')
+                .eq('plan_id', planId);
+            plan['member_count'] = (participantsResponse as List).length;
+          } catch (e) {
+            plan['member_count'] = 0;
+          }
+        } else {
+          plan['member_count'] = 0;
         }
         
         return plan;
