@@ -13,7 +13,7 @@ class PlanService {
   // Get current user ID
   String? get _userId => _supabase.auth.currentUser?.id;
 
-  // Get all plans for current user
+  // Get all plans for current user (owned plans + joined public plans)
   Future<List<Map<String, dynamic>>> getPlans({
     DateTime? planDate,
     String? orderBy = 'plan_date', // 'plan_date' or 'created_at'
@@ -22,53 +22,115 @@ class PlanService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      var query = _supabase
+      // Get plans owned by user (both private and public)
+      var ownedPlansQuery = _supabase
           .from('plans')
           .select()
-          .eq('user_id', _userId!)
-          .eq('is_public', false); // Only get private plans
+          .eq('user_id', _userId!);
 
       if (planDate != null) {
-        query = query.eq('plan_date', planDate.toIso8601String().split('T')[0]);
+        ownedPlansQuery = ownedPlansQuery.eq('plan_date', planDate.toIso8601String().split('T')[0]);
       }
 
-      // Chain order call directly without reassigning
-      final response = orderBy == 'plan_date'
-          ? await query.order('plan_date', ascending: ascending)
-          : await query.order('created_at', ascending: ascending);
+      final ownedPlans = orderBy == 'plan_date'
+          ? await ownedPlansQuery.order('plan_date', ascending: ascending)
+          : await ownedPlansQuery.order('created_at', ascending: ascending);
 
-      return List<Map<String, dynamic>>.from(response);
+      // Get public plans that user has joined
+      final participantsQuery = await _supabase
+          .from('public_plan_participants')
+          .select('plan_id')
+          .eq('user_id', _userId!);
+      
+      final joinedPlanIds = (participantsQuery as List)
+          .map((p) => p['plan_id'] as String)
+          .toList();
+      
+      List<Map<String, dynamic>> joinedPlans = [];
+      if (joinedPlanIds.isNotEmpty) {
+        var joinedPlansQuery = _supabase
+            .from('plans')
+            .select()
+            .inFilter('id', joinedPlanIds)
+            .eq('is_public', true);
+        
+        if (planDate != null) {
+          joinedPlansQuery = joinedPlansQuery.eq('plan_date', planDate.toIso8601String().split('T')[0]);
+        }
+        
+        joinedPlans = List<Map<String, dynamic>>.from(
+          orderBy == 'plan_date'
+              ? await joinedPlansQuery.order('plan_date', ascending: ascending)
+              : await joinedPlansQuery.order('created_at', ascending: ascending)
+        );
+      }
+      
+      // Combine and deduplicate (in case user owns a public plan they also joined)
+      // Mark plans as owned or joined
+      final allPlansMap = <String, Map<String, dynamic>>{};
+      for (var plan in ownedPlans) {
+        final planMap = Map<String, dynamic>.from(plan);
+        planMap['is_owner'] = true; // Mark as owned
+        allPlansMap[plan['id'] as String] = planMap;
+      }
+      for (var plan in joinedPlans) {
+        final planId = plan['id'] as String;
+        if (!allPlansMap.containsKey(planId)) {
+          // Only add if not already owned (owned plans take precedence)
+          final planMap = Map<String, dynamic>.from(plan);
+          planMap['is_owner'] = false; // Mark as joined (not owned)
+          allPlansMap[planId] = planMap;
+        }
+      }
+      
+      return allPlansMap.values.toList();
     } catch (e) {
       rethrow;
     }
   }
 
   // Get a single plan by ID with its tasks
+  // Can access: own plans (private or public) OR public plans from other users
   Future<Map<String, dynamic>?> getPlanById(String planId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      // Get plan
-      final planResponse = await _supabase
+      // First try to get plan owned by current user
+      var planResponse = await _supabase
           .from('plans')
           .select()
           .eq('id', planId)
           .eq('user_id', _userId!)
           .maybeSingle();
 
+      // If not found, try to get public plan from any user
+      if (planResponse == null) {
+        planResponse = await _supabase
+            .from('plans')
+            .select()
+            .eq('id', planId)
+            .eq('is_public', true)
+            .maybeSingle();
+      }
+
       if (planResponse == null) return null;
 
-      // Get tasks for this plan, ordered by task_order
+      final planOwnerId = planResponse['user_id'] as String?;
+      final isOwner = planOwnerId == _userId;
+
+      // Get tasks for this plan
+      // If owner: get all tasks
+      // If viewing public plan: get all tasks (public plans show all tasks)
       final tasksResponse = await _supabase
           .from('tasks')
           .select()
           .eq('plan_id', planId)
-          .eq('user_id', _userId!)
           .order('task_order', ascending: true)
           .order('due_time', ascending: true);
 
       final plan = Map<String, dynamic>.from(planResponse);
       plan['tasks'] = List<Map<String, dynamic>>.from(tasksResponse);
+      plan['is_owner'] = isOwner; // Add flag to indicate ownership
       
       return plan;
     } catch (e) {
@@ -287,6 +349,92 @@ class PlanService {
       };
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Join a public plan
+  Future<void> joinPublicPlan(String planId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // Check if plan is public
+      final plan = await _supabase
+          .from('plans')
+          .select('is_public, user_id')
+          .eq('id', planId)
+          .maybeSingle();
+
+      if (plan == null) {
+        throw Exception('Plan not found');
+      }
+
+      if (plan['is_public'] != true) {
+        throw Exception('This plan is not public');
+      }
+
+      if (plan['user_id'] == _userId) {
+        throw Exception('You cannot join your own plan');
+      }
+
+      // Check if already joined
+      final existing = await _supabase
+          .from('public_plan_participants')
+          .select()
+          .eq('plan_id', planId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+
+      if (existing != null) {
+        throw Exception('You have already joined this plan');
+      }
+
+      await _supabase
+          .from('public_plan_participants')
+          .insert({
+            'plan_id': planId,
+            'user_id': _userId!,
+            'joined_at': DateTime.now().toIso8601String(),
+          });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Leave a public plan
+  Future<void> leavePublicPlan(String planId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final result = await _supabase
+          .from('public_plan_participants')
+          .delete()
+          .eq('plan_id', planId)
+          .eq('user_id', _userId!)
+          .select();
+
+      if (result.isEmpty) {
+        throw Exception('You are not a participant of this plan');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Check if user has joined a public plan
+  Future<bool> hasJoinedPublicPlan(String planId) async {
+    if (_userId == null) return false;
+
+    try {
+      final response = await _supabase
+          .from('public_plan_participants')
+          .select()
+          .eq('plan_id', planId)
+          .eq('user_id', _userId!)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      return false;
     }
   }
 }

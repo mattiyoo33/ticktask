@@ -6,6 +6,7 @@
 /// such as adding friends as participants, managing task participants, and handling task comments with
 /// real-time updates. It provides methods for fetching task streaks, calculating XP rewards based on
 /// difficulty levels, and managing task statuses (active, completed, overdue, etc.).
+import 'package:flutter/foundation.dart';
 import 'supabase_service.dart';
 
 class TaskService {
@@ -238,7 +239,7 @@ class TaskService {
     }
   }
 
-  // Get task by ID (allows access for task owner or participants)
+  // Get task by ID (allows access for task owner, participants, or tasks in public plans user has joined)
   Future<Map<String, dynamic>?> getTaskById(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -251,7 +252,7 @@ class TaskService {
           .eq('user_id', _userId!)
           .maybeSingle();
 
-      // If not found as owner, check if user is a participant
+      // If not found as owner, check if user is a participant in a collaborative task
       if (response == null) {
         final participantCheck = await _supabase
             .from('task_participants')
@@ -268,6 +269,40 @@ class TaskService {
               .select('*')
               .eq('id', taskId)
               .maybeSingle();
+        }
+      }
+
+      // If still not found, check if task is in a public plan that user has joined
+      if (response == null) {
+        // First get the task to check if it has a plan_id
+        final taskCheck = await _supabase
+            .from('tasks')
+            .select('plan_id, is_public')
+            .eq('id', taskId)
+            .maybeSingle();
+        
+        if (taskCheck != null) {
+          final planId = taskCheck['plan_id'] as String?;
+          final isPublic = taskCheck['is_public'] as bool? ?? false;
+          
+          // If task is in a public plan, check if user has joined
+          if (planId != null && isPublic) {
+            final planParticipantCheck = await _supabase
+                .from('public_plan_participants')
+                .select('plan_id')
+                .eq('plan_id', planId)
+                .eq('user_id', _userId!)
+                .maybeSingle();
+            
+            if (planParticipantCheck != null) {
+              // User has joined the public plan, fetch the task
+              response = await _supabase
+                  .from('tasks')
+                  .select('*')
+                  .eq('id', taskId)
+                  .maybeSingle();
+            }
+          }
         }
       }
 
@@ -537,6 +572,34 @@ class TaskService {
       final task = await getTaskById(taskId);
       if (task == null) throw Exception('Task not found');
 
+      final taskOwnerId = task['user_id'] as String?;
+      final planId = task['plan_id'] as String?;
+      final isOwner = taskOwnerId == _userId;
+      
+      // Check if this is a task in a public plan (not owned by current user)
+      // For public plan tasks, we don't update the global task status
+      final isPublicPlanTask = planId != null && !isOwner;
+
+      // Check if user has already completed this task today
+      // This check happens before attempting the insert to provide better error messages
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      
+      final existingCompletions = await _supabase
+          .from('task_completions')
+          .select('id, completed_at, xp_gained')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .gte('completed_at', startOfDay.toIso8601String())
+          .lt('completed_at', endOfDay.toIso8601String());
+      
+      if ((existingCompletions as List).isNotEmpty) {
+        final existingCompletion = (existingCompletions as List).first;
+        final completedAt = existingCompletion['completed_at'] as String?;
+        throw Exception('You have already completed this task today${completedAt != null ? ' at ${DateTime.parse(completedAt).toLocal().toString().split('.')[0]}' : ''}. Only one completion per day per task is allowed.');
+      }
+
       final xpReward = task['xp_reward'] as int? ?? 0;
       final dueDateStr = task['due_date'] as String?;
       final dueTimeStr = task['due_time'] as String?;
@@ -570,6 +633,8 @@ class TaskService {
       }
 
       // Create completion record
+      // Note: The database trigger will also check for duplicates, but we check here first
+      // to provide a better error message
       final completion = await _supabase
           .from('task_completions')
           .insert({
@@ -580,8 +645,11 @@ class TaskService {
           .select()
           .single();
 
-      // Update task status
-      await updateTask(taskId, status: 'completed');
+      // Only update task status if user is the owner
+      // For public plan tasks, don't change the global task status
+      if (isOwner && !isPublicPlanTask) {
+        await updateTask(taskId, status: 'completed');
+      }
 
       // Create activity
       await _supabase.from('activities').insert({
@@ -601,6 +669,32 @@ class TaskService {
       
       return result;
     } catch (e) {
+      // Re-throw with more context if it's a PostgrestException about duplicate completion
+      if (e.toString().contains('already completed today') || 
+          e.toString().contains('P0001')) {
+        // Check if there's actually a completion record
+        try {
+          final today = DateTime.now();
+          final startOfDay = DateTime(today.year, today.month, today.day);
+          final endOfDay = startOfDay.add(const Duration(days: 1));
+          
+          final checkCompletions = await _supabase
+              .from('task_completions')
+              .select('id, completed_at')
+              .eq('task_id', taskId)
+              .eq('user_id', _userId!)
+              .gte('completed_at', startOfDay.toIso8601String())
+              .lt('completed_at', endOfDay.toIso8601String());
+          
+          if ((checkCompletions as List).isNotEmpty) {
+            final existingCompletion = (checkCompletions as List).first;
+            final completedAt = existingCompletion['completed_at'] as String?;
+            throw Exception('You have already completed this task today${completedAt != null ? ' at ${DateTime.parse(completedAt).toLocal().toString().split('.')[0]}' : ''}. Only one completion per day per task is allowed.');
+          }
+        } catch (_) {
+          // If check fails, just re-throw original error
+        }
+      }
       rethrow;
     }
   }
@@ -649,6 +743,31 @@ class TaskService {
     } catch (e) {
       // If parsing fails, return null (will fallback to awarding XP)
       return null;
+    }
+  }
+
+  // Check if the current user has completed a task today
+  Future<bool> hasCompletedTaskToday(String taskId) async {
+    if (_userId == null) return false;
+
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final completions = await _supabase
+          .from('task_completions')
+          .select('id')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!)
+          .gte('completed_at', startOfDay.toIso8601String())
+          .lt('completed_at', endOfDay.toIso8601String())
+          .limit(1);
+
+      return completions != null && (completions as List).isNotEmpty;
+    } catch (e) {
+      debugPrint('Error checking task completion: $e');
+      return false;
     }
   }
 

@@ -77,6 +77,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               itemCount: plans.length,
               itemBuilder: (context, index) {
                 final plan = plans[index];
+                final isOwner = plan['is_owner'] as bool? ?? true; // Default to true for backward compatibility
                 return PlanCardWidget(
                   plan: plan,
                   onTap: () {
@@ -87,9 +88,10 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                     );
                     HapticFeedback.lightImpact();
                   },
-                  onDelete: () async {
+                  // Only show delete button for owned plans
+                  onDelete: isOwner ? () async {
                     await _handleDeletePlan(plan['id'] as String);
-                  },
+                  } : null,
                 );
               },
             );

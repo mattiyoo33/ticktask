@@ -25,15 +25,111 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   bool _isRefreshing = false;
   bool _showCelebration = false;
   int _xpGained = 0;
+  bool _hasJoined = false;
+  bool _isOwner = false;
+  bool _isLoadingJoinStatus = true;
 
   Future<void> _refreshPlan() async {
     setState(() => _isRefreshing = true);
     final planId = ModalRoute.of(context)?.settings.arguments as String?;
     if (planId != null) {
       ref.invalidate(planByIdProvider(planId));
+      await _checkJoinStatus(planId);
     }
     await Future.delayed(const Duration(milliseconds: 500));
     setState(() => _isRefreshing = false);
+  }
+
+  Future<void> _checkJoinStatus(String planId) async {
+    try {
+      final planService = ref.read(planServiceProvider);
+      final planAsync = await ref.read(planByIdProvider(planId).future);
+      
+      if (planAsync != null) {
+        final currentUser = ref.read(currentUserProvider).value;
+        final planOwnerId = planAsync['user_id'] as String?;
+        final isOwner = planOwnerId == currentUser?.id;
+        final isPublic = planAsync['is_public'] as bool? ?? false;
+        
+        bool hasJoined = false;
+        if (!isOwner && isPublic) {
+          hasJoined = await planService.hasJoinedPublicPlan(planId);
+        }
+        
+        if (mounted) {
+          setState(() {
+            _isOwner = isOwner;
+            _hasJoined = hasJoined;
+            _isLoadingJoinStatus = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking join status: $e');
+      if (mounted) {
+        setState(() => _isLoadingJoinStatus = false);
+      }
+    }
+  }
+
+  Future<void> _handleJoinPlan(String planId) async {
+    try {
+      final planService = ref.read(planServiceProvider);
+      await planService.joinPublicPlan(planId);
+      
+      // Invalidate providers to refresh plans list
+      ref.invalidate(allPlansProvider);
+      
+      if (mounted) {
+        setState(() => _hasJoined = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Joined plan successfully!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _refreshPlan();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to join plan: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleLeavePlan(String planId) async {
+    try {
+      final planService = ref.read(planServiceProvider);
+      await planService.leavePublicPlan(planId);
+      
+      // Invalidate providers to refresh plans list
+      ref.invalidate(allPlansProvider);
+      
+      if (mounted) {
+        setState(() => _hasJoined = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Left plan successfully'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _refreshPlan();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to leave plan: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleAddTask(String planId) async {
@@ -118,6 +214,13 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
 
     final planAsync = ref.watch(planByIdProvider(planId));
 
+    // Check join status when plan loads
+    if (_isLoadingJoinStatus && planId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkJoinStatus(planId);
+      });
+    }
+
     return Stack(
       children: [
         Scaffold(
@@ -164,6 +267,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
 
             final tasks = plan['tasks'] as List<dynamic>? ?? [];
             final taskList = tasks.cast<Map<String, dynamic>>();
+            final isPublic = plan['is_public'] as bool? ?? false;
 
             return ListView(
               padding: EdgeInsets.all(4.w),
@@ -176,6 +280,44 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                   },
                 ),
                 SizedBox(height: 3.h),
+                
+                // Join/Leave Button for non-owners viewing public plans
+                if (!_isOwner && isPublic) ...[
+                  Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    child: _hasJoined
+                        ? OutlinedButton.icon(
+                            onPressed: () => _handleLeavePlan(planId),
+                            icon: CustomIconWidget(
+                              iconName: 'close',
+                              color: colorScheme.error,
+                              size: 20,
+                            ),
+                            label: Text('Leave Plan'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: colorScheme.error,
+                              padding: EdgeInsets.symmetric(vertical: 2.h),
+                              side: BorderSide(color: colorScheme.error),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () => _handleJoinPlan(planId),
+                            icon: CustomIconWidget(
+                              iconName: 'check',
+                              color: colorScheme.onPrimary,
+                              size: 20,
+                            ),
+                            label: Text('Join Plan'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              padding: EdgeInsets.symmetric(vertical: 2.h),
+                            ),
+                          ),
+                  ),
+                  SizedBox(height: 3.h),
+                ],
                 // Tasks Section
                 Row(
                   children: [
@@ -224,19 +366,29 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                           ),
                         ),
                         SizedBox(height: 2.h),
-                        ElevatedButton.icon(
-                          onPressed: () => _handleAddTask(planId),
-                          icon: CustomIconWidget(
-                            iconName: 'add',
-                            color: colorScheme.onPrimary,
-                            size: 18,
+                        // Only show add task button if owner
+                        if (_isOwner)
+                          ElevatedButton.icon(
+                            onPressed: () => _handleAddTask(planId),
+                            icon: CustomIconWidget(
+                              iconName: 'add',
+                              color: colorScheme.onPrimary,
+                              size: 18,
+                            ),
+                            label: Text('Add Task'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                            ),
+                          )
+                        else
+                          Text(
+                            'Only the plan owner can add tasks',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          label: Text('Add Task'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colorScheme.primary,
-                            foregroundColor: colorScheme.onPrimary,
-                          ),
-                        ),
                       ],
                     ),
                   )
@@ -244,23 +396,47 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                   ...taskList.asMap().entries.map((entry) {
                     final index = entry.key;
                     final task = entry.value;
-                    return PlanTaskItemWidget(
-                      task: task,
-                      index: index,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/task-detail-screen',
-                          arguments: task['id'] as String,
+                    final taskId = task['id'] as String;
+                    final taskOwnerId = task['user_id'] as String?;
+                    final currentUser = ref.read(currentUserProvider).value;
+                    final isTaskOwner = taskOwnerId == currentUser?.id;
+                    
+                    // For public plan tasks, check user-specific completion status
+                    // Use FutureBuilder to check if user has completed this task today
+                    return FutureBuilder<bool>(
+                      future: isPublic && !_isOwner && !isTaskOwner
+                          ? ref.read(taskServiceProvider).hasCompletedTaskToday(taskId)
+                          : Future.value(false),
+                      builder: (context, snapshot) {
+                        final userCompletedToday = snapshot.data ?? false;
+                        // Create a modified task map with user-specific completion status
+                        final taskWithUserStatus = Map<String, dynamic>.from(task);
+                        if (userCompletedToday) {
+                          taskWithUserStatus['status'] = 'completed';
+                        }
+                        
+                        return PlanTaskItemWidget(
+                          task: taskWithUserStatus,
+                          index: index,
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/task-detail-screen',
+                              arguments: taskId,
+                            );
+                            HapticFeedback.lightImpact();
+                          },
+                          // Disable completion button if user already completed today
+                          onComplete: userCompletedToday 
+                              ? null 
+                              : () => _handleTaskComplete(taskId),
                         );
-                        HapticFeedback.lightImpact();
                       },
-                      onComplete: () => _handleTaskComplete(task['id'] as String),
                     );
                   }),
                 SizedBox(height: 2.h),
-                // Add Task Button
-                if (taskList.isNotEmpty)
+                // Add Task Button (only for owners)
+                if (taskList.isNotEmpty && _isOwner)
                   OutlinedButton.icon(
                     onPressed: () => _handleAddTask(planId),
                     icon: CustomIconWidget(
@@ -310,20 +486,22 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           ),
         ),
         ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              final planId = ModalRoute.of(context)?.settings.arguments as String?;
-              if (planId != null) {
-                _handleAddTask(planId);
-              }
-            },
-            icon: CustomIconWidget(
-              iconName: 'add',
-              color: colorScheme.onPrimary,
-              size: 24,
-            ),
-            label: Text('Add Task'),
-          ),
+          floatingActionButton: _isOwner
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    final planId = ModalRoute.of(context)?.settings.arguments as String?;
+                    if (planId != null) {
+                      _handleAddTask(planId);
+                    }
+                  },
+                  icon: CustomIconWidget(
+                    iconName: 'add',
+                    color: colorScheme.onPrimary,
+                    size: 24,
+                  ),
+                  label: Text('Add Task'),
+                )
+              : null,
         ),
       // Celebration Overlay
       CelebrationOverlayWidget(
