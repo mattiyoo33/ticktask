@@ -134,10 +134,13 @@ class PlanService {
             .order('due_time', ascending: true);
         
         tasksList = List<Map<String, dynamic>>.from(tasksResponse);
+        print('✅ Fetched ${tasksList.length} tasks for plan $planId (isOwner: $isOwner, userId: $_userId, planOwnerId: $planOwnerId)');
       } catch (e) {
         print('⚠️ Error fetching tasks for plan $planId: $e');
+        print('⚠️ Plan owner: $planOwnerId, Current user: $_userId, Is owner: $isOwner');
         // If RLS blocks, tasksList will remain empty
         // The RLS policy should handle this, but if not, user will see "No tasks yet"
+        // Don't rethrow - allow plan to load even if tasks can't be fetched
       }
 
       final plan = Map<String, dynamic>.from(planResponse);
