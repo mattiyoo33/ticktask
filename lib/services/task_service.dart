@@ -329,10 +329,32 @@ class TaskService {
     List<String> participantIds = const [],
     String? planId,
     int? taskOrder,
+    bool? isPublic,
   }) async {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
+      // If planId is provided, check if plan is public to determine is_public
+      bool? finalIsPublic = isPublic;
+      if (planId != null && finalIsPublic == null) {
+        try {
+          final planResponse = await _supabase
+              .from('plans')
+              .select('is_public')
+              .eq('id', planId)
+              .maybeSingle();
+          
+          if (planResponse != null) {
+            // If plan is public, task must be public; if plan is private, task is private
+            finalIsPublic = planResponse['is_public'] as bool? ?? false;
+          }
+        } catch (e) {
+          print('⚠️ Error checking plan public status: $e');
+          // Default to false if check fails
+          finalIsPublic = false;
+        }
+      }
+
       final taskData = {
         'user_id': _userId!,
         'title': title,
@@ -350,6 +372,7 @@ class TaskService {
         'status': 'active',
         if (planId != null) 'plan_id': planId,
         if (taskOrder != null) 'task_order': taskOrder,
+        if (finalIsPublic != null) 'is_public': finalIsPublic,
       };
 
       final response = await _supabase

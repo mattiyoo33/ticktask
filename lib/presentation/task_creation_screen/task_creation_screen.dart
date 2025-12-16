@@ -74,7 +74,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
     }
   }
 
-  void _checkArguments() {
+  Future<void> _checkArguments() async {
     if (!mounted || _hasCheckedArguments) return;
     
       final args = ModalRoute.of(context)?.settings.arguments;
@@ -82,9 +82,28 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       // Check for planId if task is being added to a plan
         final planId = args['planId'] as String?;
       if (planId != null) {
-        setState(() {
-          _planId = planId;
-        });
+        // Fetch plan to check if it's public
+        try {
+          final planService = ref.read(planServiceProvider);
+          final plan = await planService.getPlanById(planId);
+          if (plan != null) {
+            final isPlanPublic = plan['is_public'] as bool? ?? false;
+            setState(() {
+              _planId = planId;
+              // Automatically set task public status based on plan
+              _isPublicTask = isPlanPublic;
+            });
+          } else {
+            setState(() {
+              _planId = planId;
+            });
+          }
+        } catch (e) {
+          debugPrint('Error fetching plan: $e');
+          setState(() {
+            _planId = planId;
+          });
+        }
       }
     }
     // Don't show modal automatically - users come through the selection modal
@@ -337,7 +356,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           }
         }
 
-        // Create private task
+        // Create task (public status will be determined by plan if planId is provided)
         await taskService.createTask(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -354,6 +373,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
           planId: _planId,
           taskOrder: taskOrder,
+          isPublic: _planId != null ? null : _isPublicTask, // If planId exists, let service determine from plan; otherwise use toggle
         );
       }
 
@@ -571,96 +591,128 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                   color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isPublicTask = false;
-                          });
-                          HapticFeedback.lightImpact();
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 2.h),
-                          decoration: BoxDecoration(
-                            color: !_isPublicTask
-                                ? colorScheme.primary
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CustomIconWidget(
-                                iconName: 'lock',
-                                color: !_isPublicTask
-                                    ? colorScheme.onPrimary
-                                    : colorScheme.onSurfaceVariant,
-                                size: 5.w,
-                              ),
-                              SizedBox(width: 2.w),
-                              Text(
-                                'Private',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: !_isPublicTask
-                                      ? colorScheme.onPrimary
-                                      : colorScheme.onSurfaceVariant,
-                                  fontWeight: !_isPublicTask
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
+                child: _planId != null
+                    ? Container(
+                        padding: EdgeInsets.symmetric(vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: _isPublicTask
+                              ? colorScheme.secondary
+                              : colorScheme.primary,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isPublicTask = true;
-                          });
-                          HapticFeedback.lightImpact();
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 2.h),
-                          decoration: BoxDecoration(
-                            color: _isPublicTask
-                                ? colorScheme.secondary
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CustomIconWidget(
-                                iconName: 'public',
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CustomIconWidget(
+                              iconName: _isPublicTask ? 'public' : 'lock',
+                              color: _isPublicTask
+                                  ? colorScheme.onSecondary
+                                  : colorScheme.onPrimary,
+                              size: 5.w,
+                            ),
+                            SizedBox(width: 2.w),
+                            Text(
+                              _isPublicTask ? 'Public (Plan is Public)' : 'Private (Plan is Private)',
+                              style: theme.textTheme.titleSmall?.copyWith(
                                 color: _isPublicTask
                                     ? colorScheme.onSecondary
-                                    : colorScheme.onSurfaceVariant,
-                                size: 5.w,
+                                    : colorScheme.onPrimary,
+                                fontWeight: FontWeight.w600,
                               ),
-                              SizedBox(width: 2.w),
-                              Text(
-                                'Public',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: _isPublicTask
-                                      ? colorScheme.onSecondary
-                                      : colorScheme.onSurfaceVariant,
-                                  fontWeight: _isPublicTask
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                            ),
+                          ],
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isPublicTask = false;
+                                });
+                                HapticFeedback.lightImpact();
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: !_isPublicTask
+                                      ? colorScheme.primary
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CustomIconWidget(
+                                      iconName: 'lock',
+                                      color: !_isPublicTask
+                                          ? colorScheme.onPrimary
+                                          : colorScheme.onSurfaceVariant,
+                                      size: 5.w,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      'Private',
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        color: !_isPublicTask
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurfaceVariant,
+                                        fontWeight: !_isPublicTask
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isPublicTask = true;
+                                });
+                                HapticFeedback.lightImpact();
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: _isPublicTask
+                                      ? colorScheme.secondary
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CustomIconWidget(
+                                      iconName: 'public',
+                                      color: _isPublicTask
+                                          ? colorScheme.onSecondary
+                                          : colorScheme.onSurfaceVariant,
+                                      size: 5.w,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      'Public',
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        color: _isPublicTask
+                                            ? colorScheme.onSecondary
+                                            : colorScheme.onSurfaceVariant,
+                                        fontWeight: _isPublicTask
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
               Expanded(
           child: SingleChildScrollView(
