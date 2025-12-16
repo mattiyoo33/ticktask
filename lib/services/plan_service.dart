@@ -5,6 +5,7 @@
 /// "Weekend Study Plan", "Morning Routine"). Plans allow users to organize a sequence of tasks together
 /// instead of creating standalone tasks. Each plan can have a title, description, date/time range, and
 /// contains multiple tasks that support all normal task features including completion, due times, and XP rewards.
+import 'package:flutter/foundation.dart';
 import 'supabase_service.dart';
 
 class PlanService {
@@ -121,15 +122,26 @@ class PlanService {
       // Get tasks for this plan
       // If owner: get all tasks
       // If viewing public plan: get all tasks (public plans show all tasks)
-      final tasksResponse = await _supabase
-          .from('tasks')
-          .select()
-          .eq('plan_id', planId)
-          .order('task_order', ascending: true)
-          .order('due_time', ascending: true);
+      // Note: RLS policy should allow viewing tasks in public plans user has joined
+      List<Map<String, dynamic>> tasksList = [];
+      
+      try {
+        final tasksResponse = await _supabase
+            .from('tasks')
+            .select()
+            .eq('plan_id', planId)
+            .order('task_order', ascending: true)
+            .order('due_time', ascending: true);
+        
+        tasksList = List<Map<String, dynamic>>.from(tasksResponse);
+      } catch (e) {
+        print('⚠️ Error fetching tasks for plan $planId: $e');
+        // If RLS blocks, tasksList will remain empty
+        // The RLS policy should handle this, but if not, user will see "No tasks yet"
+      }
 
       final plan = Map<String, dynamic>.from(planResponse);
-      plan['tasks'] = List<Map<String, dynamic>>.from(tasksResponse);
+      plan['tasks'] = tasksList;
       plan['is_owner'] = isOwner; // Add flag to indicate ownership
       
       return plan;
