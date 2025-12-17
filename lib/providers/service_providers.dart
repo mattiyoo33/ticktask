@@ -335,3 +335,16 @@ final activeStreaksProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
   return await taskService.getAllActiveStreaks();
 });
 
+// Weekly completion counts (last 7 days)
+final weeklyCompletionCountsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+
+  if (authStateValue?.session == null) {
+    return [];
+  }
+
+  final taskService = ref.watch(taskServiceProvider);
+  return await taskService.getWeeklyCompletionCounts();
+});
+

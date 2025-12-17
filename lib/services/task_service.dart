@@ -1064,6 +1064,82 @@ class TaskService {
     }
   }
 
+  // Get completion counts for the last 7 days (tasks & plan tasks)
+  Future<List<Map<String, dynamic>>> getWeeklyCompletionCounts() async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+
+      final response = await _supabase
+          .from('task_completions')
+          .select('task_id, completed_at')
+          .eq('user_id', _userId!)
+          .gte('completed_at', start.toIso8601String())
+          .order('completed_at', ascending: true);
+
+      final completions = List<Map<String, dynamic>>.from(response);
+
+      // Initialize last 7 days map with zero counts
+      final Map<String, int> dailyCounts = {};
+      for (int i = 0; i < 7; i++) {
+        final date = start.add(Duration(days: i));
+        final key = DateTime(date.year, date.month, date.day).toIso8601String();
+        dailyCounts[key] = 0;
+      }
+
+      // Tally completions per day
+      for (final completion in completions) {
+        final completedAt = completion['completed_at'];
+        if (completedAt == null) continue;
+        final date = DateTime.parse(completedAt.toString());
+        final normalized = DateTime(date.year, date.month, date.day).toIso8601String();
+        if (dailyCounts.containsKey(normalized)) {
+          dailyCounts[normalized] = (dailyCounts[normalized] ?? 0) + 1;
+        }
+      }
+
+      // Build ordered list for UI
+      final List<Map<String, dynamic>> result = [];
+      dailyCounts.forEach((dateIso, count) {
+        final date = DateTime.parse(dateIso);
+        result.add({
+          'date': date,
+          'label': _weekdayLabel(date.weekday),
+          'count': count,
+        });
+      });
+
+      // Ensure chronological order (oldest -> newest)
+      result.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+      return result;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  String _weekdayLabel(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'Mon';
+      case DateTime.tuesday:
+        return 'Tue';
+      case DateTime.wednesday:
+        return 'Wed';
+      case DateTime.thursday:
+        return 'Thu';
+      case DateTime.friday:
+        return 'Fri';
+      case DateTime.saturday:
+        return 'Sat';
+      case DateTime.sunday:
+        return 'Sun';
+      default:
+        return '';
+    }
+  }
+
   // Get task participants (for collaborative tasks)
   Future<List<Map<String, dynamic>>> getTaskParticipants(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');

@@ -6,11 +6,13 @@ import '../../../core/app_export.dart';
 class CurrentStreaksWidget extends StatelessWidget {
   final List<Map<String, dynamic>> streaks;
   final Function(Map<String, dynamic>) onStreakTap;
+  final List<Map<String, dynamic>> weeklyCounts;
 
   const CurrentStreaksWidget({
     super.key,
     required this.streaks,
     required this.onStreakTap,
+    this.weeklyCounts = const [],
   });
 
   Color _getStreakColor(int dayCount, BuildContext context) {
@@ -26,30 +28,42 @@ class CurrentStreaksWidget extends StatelessWidget {
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.06),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 2.w),
-            child: Row(
-              children: [
-                CustomIconWidget(
-                  iconName: 'local_fire_department',
-                  color: AppTheme.warningLight,
-                  size: 24,
+          Row(
+            children: [
+              CustomIconWidget(
+                iconName: 'local_fire_department',
+                color: AppTheme.warningLight,
+                size: 24,
+              ),
+              SizedBox(width: 2.w),
+              Text(
+                'Current Streaks',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
                 ),
-                SizedBox(width: 2.w),
-                Text(
-                  'Current Streaks',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: 1.5.h),
+          _buildWeeklyCompletionCircles(context),
+          SizedBox(height: 1.5.h),
           streaks.isEmpty ? _buildEmptyState(context) : _buildStreaksList(context),
         ],
       ),
@@ -61,40 +75,27 @@ class CurrentStreaksWidget extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: EdgeInsets.all(6.w),
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.1),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-            spreadRadius: 0,
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
-      child: Column(
+      child: Row(
         children: [
           CustomIconWidget(
             iconName: 'local_fire_department',
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-            size: 48,
+            color: colorScheme.onSurfaceVariant,
+            size: 24,
           ),
-          SizedBox(height: 2.h),
-          Text(
-            'No active streaks',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+          SizedBox(width: 2.w),
+          Expanded(
+            child: Text(
+              'No streak yet — finish a recurring task to start one.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          SizedBox(height: 1.h),
-          Text(
-            'Complete recurring tasks to build streaks!',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -113,6 +114,80 @@ class CurrentStreaksWidget extends StatelessWidget {
           final streak = streaks[index];
           return _buildStreakCard(streak, context);
         },
+      ),
+    );
+  }
+
+  Widget _buildWeeklyCompletionCircles(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final fallbackLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final data = weeklyCounts.isNotEmpty
+        ? weeklyCounts
+        : List.generate(7, (index) => {
+              'label': fallbackLabels[index % fallbackLabels.length],
+              'count': 0,
+            });
+
+    return SizedBox(
+      height: 12.h,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: data.map((day) {
+          final count = day['count'] as int? ?? 0;
+          final label = day['label'] as String? ?? '';
+          final isActive = count >= 1;
+
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Container(
+                width: 9.w,
+                height: 9.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isActive
+                      ? colorScheme.primary
+                      : colorScheme.surfaceVariant,
+                  border: Border.all(
+                    color: isActive
+                        ? colorScheme.primary
+                        : colorScheme.outline.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: colorScheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Center(
+                  child: Text(
+                    '$count',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: isActive
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }

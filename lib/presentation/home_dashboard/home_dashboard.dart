@@ -88,6 +88,16 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     );
   }
 
+  // Get weekly completion counts (last 7 days)
+  List<Map<String, dynamic>> get _weeklyCompletionCounts {
+    final weeklyAsync = ref.watch(weeklyCompletionCountsProvider);
+    return weeklyAsync.when(
+      data: (counts) => counts,
+      loading: () => [],
+      error: (_, __) => [],
+    );
+  }
+
   // Get recent activities from database
   List<Map<String, dynamic>> get _recentActivity {
     final activitiesAsync = ref.watch(recentActivitiesProvider);
@@ -259,6 +269,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                     CurrentStreaksWidget(
                       streaks: _currentStreaks,
                       onStreakTap: _onStreakTap,
+                      weeklyCounts: _weeklyCompletionCounts,
                     ),
                     SizedBox(height: 2.h),
                     RecentActivityWidget(
