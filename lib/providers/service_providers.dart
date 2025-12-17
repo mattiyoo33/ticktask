@@ -264,11 +264,13 @@ final planByIdProvider = FutureProvider.family<Map<String, dynamic>?, String>((r
 
 // Public Plan Filters - similar to PublicTaskFilters
 class PublicPlanFilters {
+  final String? categoryId;
   final String? searchQuery;
   final int limit;
   final int offset;
 
   const PublicPlanFilters({
+    this.categoryId,
     this.searchQuery,
     this.limit = 50,
     this.offset = 0,
@@ -279,18 +281,20 @@ class PublicPlanFilters {
       identical(this, other) ||
       other is PublicPlanFilters &&
           runtimeType == other.runtimeType &&
+          categoryId == other.categoryId &&
           searchQuery == other.searchQuery &&
           limit == other.limit &&
           offset == other.offset;
 
   @override
-  int get hashCode => searchQuery.hashCode ^ limit.hashCode ^ offset.hashCode;
+  int get hashCode => categoryId.hashCode ^ searchQuery.hashCode ^ limit.hashCode ^ offset.hashCode;
 }
 
 // Public Plans Provider
 final publicPlansProvider = FutureProvider.family<List<Map<String, dynamic>>, PublicPlanFilters>((ref, filters) async {
   final planService = ref.watch(planServiceProvider);
   final result = await planService.getPublicPlans(
+    categoryId: filters.categoryId,
     searchQuery: filters.searchQuery,
     limit: filters.limit,
     offset: filters.offset,

@@ -69,6 +69,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     
     final planFilters = PublicPlanFilters(
       searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+      categoryId: _selectedTab == 1 ? _selectedCategoryId : null,
       limit: 50,
       offset: 0,
     );
@@ -154,8 +155,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             ),
           ),
 
-          // Category Filter (only for tasks)
-          if (_selectedTab == 0)
+          // Category Filter (tasks & plans share same selector)
+          if (true)
             CategoryFilterWidget(
               selectedCategoryId: _selectedCategoryId,
               onCategorySelected: _handleCategoryFilter,

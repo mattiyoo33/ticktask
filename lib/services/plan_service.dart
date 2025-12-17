@@ -226,6 +226,7 @@ class PlanService {
   // Get public plans with optional filters
   Future<List<Map<String, dynamic>>> getPublicPlans({
     String? searchQuery,
+    String? categoryId,
     int? limit,
     int? offset,
   }) async {
@@ -240,6 +241,9 @@ class PlanService {
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
         query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+      }
+      if (categoryId != null && categoryId.isNotEmpty) {
+        query = query.eq('category_id', categoryId);
       }
 
       var orderedQuery = query.order('created_at', ascending: false);
