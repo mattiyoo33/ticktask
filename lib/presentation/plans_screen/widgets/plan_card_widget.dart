@@ -5,7 +5,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
-import '../../../services/plan_service.dart';
 
 class PlanCardWidget extends ConsumerWidget {
   final Map<String, dynamic> plan;
@@ -60,14 +59,21 @@ class PlanCardWidget extends ConsumerWidget {
     final startTime = plan['start_time'] as String?;
     final endTime = plan['end_time'] as String?;
 
-    // Get plan stats using stable provider
     final planStatsAsync = ref.watch(planStatsProvider(planId));
 
-    return Card(
+    return Container(
       margin: EdgeInsets.only(bottom: 2.h),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: InkWell(
         onTap: onTap,
@@ -78,24 +84,68 @@ class PlanCardWidget extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            Consumer(
+                              builder: (context, ref, _) {
+                                final stats = ref.watch(planStatsProvider(planId));
+                                return stats.maybeWhen(
+                                  data: (s) {
+                                    final total = s['total_tasks'] as int? ?? 0;
+                                    return Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          CustomIconWidget(
+                                            iconName: 'list',
+                                            color: colorScheme.primary,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 1.w),
+                                          Text(
+                                            '$total',
+                                            style: theme.textTheme.labelMedium?.copyWith(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  orElse: () => const SizedBox.shrink(),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                         if (description != null && description.isNotEmpty) ...[
-                          SizedBox(height: 0.5.h),
+                          SizedBox(height: 0.7.h),
                           Text(
                             description,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
+                              height: 1.4,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -117,7 +167,7 @@ class PlanCardWidget extends ConsumerWidget {
                     ),
                 ],
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: 1.5.h),
               Row(
                 children: [
                   CustomIconWidget(
@@ -149,7 +199,7 @@ class PlanCardWidget extends ConsumerWidget {
                   ],
                 ],
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: 1.5.h),
               planStatsAsync.when(
                 data: (stats) {
                   final totalTasks = stats['total_tasks'] as int? ?? 0;
@@ -158,10 +208,10 @@ class PlanCardWidget extends ConsumerWidget {
 
                   if (totalTasks == 0) {
                     return Container(
-                      padding: EdgeInsets.all(2.w),
+                      padding: EdgeInsets.all(2.5.w),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         children: [
@@ -199,30 +249,31 @@ class PlanCardWidget extends ConsumerWidget {
                             '$completionPercentage%',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.primary,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
                       SizedBox(height: 1.h),
-                      LinearProgressIndicator(
-                        value: completionPercentage / 100,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          colorScheme.primary,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: completionPercentage / 100,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          color: colorScheme.primary,
+                          minHeight: 8,
                         ),
-                        minHeight: 6,
-                        borderRadius: BorderRadius.circular(3),
                       ),
                     ],
                   );
                 },
-                loading: () => SizedBox(
-                  height: 2.h,
-                  child: LinearProgressIndicator(
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      colorScheme.primary,
+                loading: () => Center(
+                  child: SizedBox(
+                    height: 2.h,
+                    width: 2.h,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),

@@ -377,14 +377,11 @@ class PlanService {
 
   // Get plan statistics
   Future<Map<String, dynamic>> getPlanStats(String planId) async {
-    if (_userId == null) throw Exception('User not authenticated');
-
     try {
       final tasks = await _supabase
           .from('tasks')
           .select('status')
-          .eq('plan_id', planId)
-          .eq('user_id', _userId!);
+          .eq('plan_id', planId);
 
       final taskList = List<Map<String, dynamic>>.from(tasks);
       final totalTasks = taskList.length;
