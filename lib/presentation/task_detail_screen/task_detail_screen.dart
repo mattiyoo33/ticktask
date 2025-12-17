@@ -653,7 +653,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       setState(() {
         _isLoading = false;
         _xpGained = xpGained + streakBonus;
-        _showCelebration = true; // Show celebration for all completions
+        // Reset celebration flag before showing to avoid missed rebuilds
+        _showCelebration = false;
+      });
+
+      // Trigger celebration after frame to ensure overlay paints (avoids missed builds)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _showCelebration = true;
+          });
+        }
       });
     } catch (e) {
       setState(() {

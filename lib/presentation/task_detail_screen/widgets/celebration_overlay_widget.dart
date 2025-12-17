@@ -36,12 +36,12 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
     super.initState();
 
     _confettiController = AnimationController(
-      duration: Duration(milliseconds: 2000),
+      duration: Duration(milliseconds: 1400),
       vsync: this,
     );
 
     _xpController = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: Duration(milliseconds: 1200),
       vsync: this,
     );
 
@@ -99,6 +99,13 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
   void _startCelebration() {
     _confettiController.forward();
     _xpController.forward();
+
+    // Fallback to ensure overlay dismisses even if status listener misses
+    Future.delayed(const Duration(milliseconds: 2400), () {
+      if (mounted && widget.isVisible) {
+        widget.onAnimationComplete?.call();
+      }
+    });
   }
 
   @override
@@ -118,89 +125,84 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
     final colorScheme = theme.colorScheme;
 
     return Positioned.fill(
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.3),
-        child: Stack(
-          children: [
-            // Confetti particles
-            AnimatedBuilder(
-              animation: _confettiAnimation,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: ConfettiPainter(_confettiAnimation.value),
-                  size: Size.infinite,
-                );
-              },
-            ),
-
-            // XP notification
-            Center(
-              child: AnimatedBuilder(
-                animation:
-                    Listenable.merge([_xpScaleAnimation, _xpOpacityAnimation]),
+      child: IgnorePointer(
+        ignoring: true,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.18),
+          child: Stack(
+            children: [
+              // Confetti particles
+              AnimatedBuilder(
+                animation: _confettiAnimation,
                 builder: (context, child) {
-                  return Opacity(
-                    opacity: _xpOpacityAnimation.value,
-                    child: Transform.scale(
-                      scale: _xpScaleAnimation.value,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 8.w, vertical: 4.h),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colorScheme.primary.withValues(alpha: 0.3),
-                              offset: Offset(0, 8),
-                              blurRadius: 24,
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CustomIconWidget(
-                              iconName: 'stars',
-                              color: Colors.white,
-                              size: 48,
-                            ),
-                            SizedBox(height: 1.h),
-                            Text(
-                              'Task Completed!',
-                              style: theme.textTheme.headlineSmall?.copyWith(
+                  return CustomPaint(
+                    painter: ConfettiPainter(_confettiAnimation.value),
+                    size: Size.infinite,
+                  );
+                },
+              ),
+
+              // XP notification
+              Center(
+                child: AnimatedBuilder(
+                  animation:
+                      Listenable.merge([_xpScaleAnimation, _xpOpacityAnimation]),
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _xpOpacityAnimation.value,
+                      child: Transform.scale(
+                        scale: _xpScaleAnimation.value,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 8.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'stars',
                                 color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                                size: 48,
                               ),
-                            ),
-                            SizedBox(height: 0.5.h),
-                            Text(
-                              'Congrats!',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                              SizedBox(height: 1.h),
+                              Text(
+                                'Task Completed!',
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            if (widget.xpGained > 0) ...[
                               SizedBox(height: 0.5.h),
                               Text(
-                                '+${widget.xpGained} XP',
-                                style: theme.textTheme.titleMedium?.copyWith(
+                                'Congrats!',
+                                style: theme.textTheme.titleLarge?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              if (widget.xpGained > 0) ...[
+                                SizedBox(height: 0.5.h),
+                                Text(
+                                  '+${widget.xpGained} XP',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -215,7 +217,7 @@ class ConfettiPainter extends CustomPainter {
 
   static List<ConfettiParticle> _generateParticles() {
     final random = math.Random();
-    return List.generate(50, (index) {
+    return List.generate(20, (index) {
       return ConfettiParticle(
         x: random.nextDouble(),
         y: random.nextDouble() * 0.3,

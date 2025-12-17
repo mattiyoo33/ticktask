@@ -951,6 +951,17 @@ class TaskService {
           .eq('user_id', _userId!)
           .maybeSingle();
 
+      if (response == null) return null;
+
+      // Clamp negative or null streak values to zero
+      final currentStreak = (response['current_streak'] as int?) ?? 0;
+      final maxStreak = (response['max_streak'] as int?) ?? 0;
+      final weekProgress = response['week_progress'] as List<dynamic>? ?? [];
+
+      response['current_streak'] = currentStreak < 0 ? 0 : currentStreak;
+      response['max_streak'] = maxStreak < 0 ? 0 : maxStreak;
+      response['week_progress'] = weekProgress;
+
       return response;
     } catch (e) {
       rethrow;
