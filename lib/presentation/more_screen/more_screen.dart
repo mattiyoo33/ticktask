@@ -33,7 +33,6 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             Icons.person_outline,
             colorScheme,
           ),
-          SizedBox(height: 1.h),
           _buildMenuItem(
             context,
             title: 'My Profile',
@@ -54,7 +53,6 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             Icons.people_outline,
             colorScheme,
           ),
-          SizedBox(height: 1.h),
           _buildMenuItem(
             context,
             title: 'Friends Dashboard',
@@ -65,6 +63,68 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
               HapticFeedback.lightImpact();
               Navigator.pushNamed(context, '/friends-screen');
             },
+          ),
+          SizedBox(height: 3.h),
+
+          // Settings Section (with header)
+          _buildSectionHeader(
+            context,
+            'Settings',
+            Icons.settings_outlined,
+            colorScheme,
+          ),
+          _buildMenuItem(
+            context,
+            title: 'Notifications',
+            subtitle: 'Manage alerts and reminders',
+            icon: Icons.notifications,
+            iconColor: colorScheme.primary,
+            onTap: _handleNotificationSettings,
+          ),
+          SizedBox(height: 1.5.h),
+          _buildMenuItem(
+            context,
+            title: 'Privacy',
+            subtitle: 'Control visibility and data',
+            icon: Icons.privacy_tip,
+            iconColor: colorScheme.primary,
+            onTap: _handlePrivacySettings,
+          ),
+          SizedBox(height: 1.5.h),
+          _buildMenuItem(
+            context,
+            title: 'Theme',
+            subtitle: 'Light / Dark',
+            icon: Icons.palette,
+            iconColor: colorScheme.primary,
+            onTap: _handleThemeSettings,
+          ),
+          SizedBox(height: 1.5.h),
+          _buildMenuItem(
+            context,
+            title: 'Language',
+            subtitle: 'Choose your language',
+            icon: Icons.language,
+            iconColor: colorScheme.primary,
+            onTap: _handleLanguageSettings,
+          ),
+          SizedBox(height: 1.5.h),
+          _buildMenuItem(
+            context,
+            title: 'Quiet Hours',
+            subtitle: 'Do Not Disturb schedule',
+            icon: Icons.bedtime,
+            iconColor: colorScheme.primary,
+            onTap: _handleQuietHours,
+          ),
+          SizedBox(height: 1.5.h),
+          _buildMenuItem(
+            context,
+            title: 'Sign Out',
+            subtitle: 'Sign out of your account',
+            icon: Icons.logout,
+            iconColor: AppTheme.errorLight,
+            onTap: _handleLogout,
           ),
           SizedBox(height: 4.h),
         ],
@@ -168,6 +228,58 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showComingSoonDialog(String title) {
+    HapticFeedback.lightImpact();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$title'),
+        content: const Text('This setting will be available soon.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleNotificationSettings() => _showComingSoonDialog('Notification Settings');
+  void _handlePrivacySettings() => _showComingSoonDialog('Privacy Settings');
+  void _handleThemeSettings() => _showComingSoonDialog('Theme Settings');
+  void _handleLanguageSettings() => _showComingSoonDialog('Language Settings');
+  void _handleQuietHours() => _showComingSoonDialog('Quiet Hours');
+
+  void _handleLogout() {
+    HapticFeedback.lightImpact();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Signed out'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text('Sign Out'),
+          ),
+        ],
       ),
     );
   }

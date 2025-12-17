@@ -4,7 +4,6 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import './widgets/account_settings_widget.dart';
 import './widgets/achievement_gallery_widget.dart';
 import './widgets/activity_history_widget.dart';
 import './widgets/profile_header_widget.dart';
@@ -171,38 +170,52 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              ProfileHeaderWidget(
-                userData: userData,
-                onEditProfile: _handleEditProfile,
-                onChangeAvatar: _handleChangeAvatar,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              floating: false,
+              backgroundColor: colorScheme.surface,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+                onPressed: () => Navigator.pop(context),
               ),
-              SizedBox(height: 2.h),
-              StatisticsOverviewWidget(
-                statisticsData: statisticsData,
+              title: Text(
+                'Profile',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
               ),
-              SizedBox(height: 2.h),
-              AchievementGalleryWidget(
-                achievements: achievements,
+            ),
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  [
+                    ProfileHeaderWidget(
+                      userData: userData,
+                      onEditProfile: _handleEditProfile,
+                      onChangeAvatar: _handleChangeAvatar,
+                    ),
+                    SizedBox(height: 2.h),
+                    StatisticsOverviewWidget(
+                      statisticsData: statisticsData,
+                    ),
+                    SizedBox(height: 2.h),
+                    AchievementGalleryWidget(
+                      achievements: achievements,
+                    ),
+                    SizedBox(height: 2.h),
+                    ActivityHistoryWidget(
+                      activities: activities,
+                    ),
+                    SizedBox(height: 10.h), // Bottom padding for navigation
+                  ],
+                ),
               ),
-              SizedBox(height: 2.h),
-              ActivityHistoryWidget(
-                activities: activities,
-              ),
-              SizedBox(height: 2.h),
-              AccountSettingsWidget(
-                onNotificationSettings: _handleNotificationSettings,
-                onPrivacySettings: _handlePrivacySettings,
-                onThemeSettings: _handleThemeSettings,
-                onLanguageSettings: _handleLanguageSettings,
-                onQuietHours: _handleQuietHours,
-                onLogout: _handleLogout,
-              ),
-              SizedBox(height: 10.h), // Bottom padding for navigation
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: const CustomBottomBar(
