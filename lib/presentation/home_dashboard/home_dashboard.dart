@@ -10,6 +10,7 @@ import './widgets/quick_actions_widget.dart';
 import './widgets/recent_activity_widget.dart';
 import './widgets/tasker_mascot_widget.dart';
 import './widgets/todays_tasks_widget.dart';
+import '../discover_screen/widgets/task_type_choice_modal.dart';
 
 class HomeDashboard extends ConsumerStatefulWidget {
   const HomeDashboard({super.key});
@@ -168,6 +169,27 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     Navigator.pushNamed(context, '/task-detail-screen', arguments: task);
   }
 
+  void _onCreateTask() {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(6.w)),
+      ),
+      builder: (modalContext) => TaskTypeChoiceModal(
+        onTaskSelected: () {
+          Navigator.pop(modalContext);
+          Navigator.pushNamed(context, '/task-creation-screen');
+        },
+        onPlanSelected: () {
+          Navigator.pop(modalContext);
+          Navigator.pushNamed(context, '/plan-creation-screen');
+        },
+      ),
+    );
+  }
+
   Future<void> _onTaskDelete(Map<String, dynamic> task) async {
     showDialog(
       context: context,
@@ -283,8 +305,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                     ),
                     SizedBox(height: 2.h),
                     QuickActionsWidget(
-                      onCreateTask: () =>
-                          Navigator.pushNamed(context, '/task-creation-screen'),
+                      onCreateTask: _onCreateTask,
                       onViewAllTasks: () =>
                           Navigator.pushNamed(context, '/task-list-screen'),
                       onInviteFriends: () =>

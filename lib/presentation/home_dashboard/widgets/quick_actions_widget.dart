@@ -45,7 +45,7 @@ class QuickActionsWidget extends StatelessWidget {
               Expanded(
                 child: _buildActionCard(
                   context: context,
-                  title: 'Create Task',
+                  title: 'Create Task/Plan',
                   icon: 'add_task',
                   color: colorScheme.primary,
                   onTap: onCreateTask,
