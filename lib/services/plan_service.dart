@@ -334,6 +334,10 @@ class PlanService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
+      // Delete all tasks that belong to this plan (and their related data via cascades)
+      await _supabase.from('tasks').delete().eq('plan_id', planId);
+
+      // Delete the plan itself (owned by current user)
       await _supabase
           .from('plans')
           .delete()
