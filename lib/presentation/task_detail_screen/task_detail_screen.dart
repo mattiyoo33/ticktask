@@ -636,6 +636,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       ref.invalidate(todaysTasksProvider);
       ref.invalidate(overallUserStreakProvider);
       ref.invalidate(activeStreaksProvider);
+      ref.invalidate(userProfileFromDbProvider);
+      ref.invalidate(recentActivitiesProvider);
       
       setState(() {
         _isLoading = false;

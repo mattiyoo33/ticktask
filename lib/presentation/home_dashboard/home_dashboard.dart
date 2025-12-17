@@ -149,6 +149,10 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
       }
     });
 
+    // Refresh profile XP/level and other home data
+    ref.invalidate(userProfileFromDbProvider);
+    ref.invalidate(todaysTasksProvider);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Task completed! +${task['xpReward']} XP earned'),
