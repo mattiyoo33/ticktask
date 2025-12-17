@@ -39,7 +39,8 @@ class PublicTaskService {
             *,
             categories:category_id(*)
           ''')
-          .eq('is_public', true);
+          .eq('is_public', true)
+          .isFilter('plan_id', null); // Exclude tasks that belong to plans from Discover
 
       if (categoryId != null) {
         filterQuery = filterQuery.eq('category_id', categoryId);
