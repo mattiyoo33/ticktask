@@ -63,17 +63,17 @@ class TaskCardWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               )
             else if (!isCompleted && onComplete != null)
-              SlidableAction(
-                onPressed: (context) {
-                  HapticFeedback.mediumImpact();
-                  if (onComplete != null) onComplete!();
-                },
-                backgroundColor: AppTheme.lightTheme.colorScheme.secondary,
-                foregroundColor: Colors.white,
-                icon: Icons.check,
-                label: 'Complete',
-                borderRadius: BorderRadius.circular(12),
-              ),
+            SlidableAction(
+              onPressed: (context) {
+                HapticFeedback.mediumImpact();
+                if (onComplete != null) onComplete!();
+              },
+              backgroundColor: AppTheme.lightTheme.colorScheme.secondary,
+              foregroundColor: Colors.white,
+              icon: Icons.check,
+              label: 'Complete',
+              borderRadius: BorderRadius.circular(12),
+            ),
           ],
         ),
         endActionPane: ActionPane(
@@ -132,39 +132,39 @@ class TaskCardWidget extends StatelessWidget {
           child: Stack(
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? colorScheme.primary.withValues(alpha: 0.1)
-                      : isPublic
-                          ? Colors.green.withValues(alpha: 0.1)
-                      : colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isSelected
-                      ? Border.all(color: colorScheme.primary, width: 2)
-                      : isPublic
-                          ? Border.all(
-                              color: Colors.green.withValues(alpha: 0.4),
-                              width: 1.5,
-                            )
-                      : Border.all(
-                          color: colorScheme.outline.withValues(alpha: 0.2)),
-                  boxShadow: [
-                    BoxShadow(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primary.withValues(alpha: 0.1)
+                  : isPublic
+                      ? Colors.green.withValues(alpha: 0.1)
+                  : colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(color: colorScheme.primary, width: 2)
+                  : isPublic
+                      ? Border.all(
+                          color: Colors.green.withValues(alpha: 0.4),
+                          width: 1.5,
+                        )
+                  : Border.all(
+                      color: colorScheme.outline.withValues(alpha: 0.2)),
+              boxShadow: [
+                BoxShadow(
                       color: isPublic
                           ? Colors.green.withValues(alpha: 0.15)
-                          : colorScheme.shadow.withValues(alpha: 0.1),
-                      offset: const Offset(0, 2),
-                      blurRadius: 8,
-                      spreadRadius: 0,
-                    ),
-                  ],
+                      : colorScheme.shadow.withValues(alpha: 0.1),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                  spreadRadius: 0,
                 ),
-                child: Padding(
-                  padding: EdgeInsets.all(4.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(4.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Row(
                     children: [
                       if (isMultiSelectMode) ...[
@@ -229,23 +229,23 @@ class TaskCardWidget extends StatelessWidget {
                     children: [
                       if (!isPublic) ...[
                         Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CustomIconWidget(
-                              iconName: 'lock',
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'lock',
                               color: colorScheme.onSurfaceVariant,
-                              size: 12,
-                            ),
-                            SizedBox(width: 1.w),
-                            Text(
-                              'Private',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 9.sp,
+                                size: 12,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 1.w),
+                              Text(
+                                'Private',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 9.sp,
+                                ),
+                              ),
+                            ],
                         ),
                         SizedBox(width: 2.w),
                       ],
@@ -412,12 +412,12 @@ class TaskCardWidget extends StatelessWidget {
               ),
             ),
         ],
+          ),
+        ),
       ),
-    ),
-    ),
     );
   }
-  
+
   Widget _buildDifficultyBadge(BuildContext context) {
     final theme = Theme.of(context);
     final difficulty = task['difficulty']?.toLowerCase() ?? 'easy';

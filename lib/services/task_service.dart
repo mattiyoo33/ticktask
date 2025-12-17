@@ -676,7 +676,7 @@ class TaskService {
       // Only update task status if user is the owner
       // For public plan tasks, don't change the global task status
       if (isOwner && !isPublicPlanTask) {
-        await updateTask(taskId, status: 'completed');
+      await updateTask(taskId, status: 'completed');
       }
 
       // Create activity

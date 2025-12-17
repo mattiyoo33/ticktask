@@ -969,7 +969,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 // Task Information
                 TaskInfoWidget(
                   description: _taskData!['description'] as String? ?? '',
-                  dueDate: dueDate ?? DateTime.now().add(const Duration(days: 30)),
+                  dueDate: dueDate,
                   difficulty: _taskData!['difficulty'] as String? ?? 'Medium',
                   xpValue: _taskData!['xp_reward'] as int? ?? 0,
                   createdDate: createdDate,

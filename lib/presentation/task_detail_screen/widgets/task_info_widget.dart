@@ -6,7 +6,7 @@ import '../../../widgets/custom_icon_widget.dart';
 
 class TaskInfoWidget extends StatelessWidget {
   final String description;
-  final DateTime dueDate;
+  final DateTime? dueDate;
   final String difficulty;
   final int xpValue;
   final DateTime createdDate;
@@ -17,7 +17,7 @@ class TaskInfoWidget extends StatelessWidget {
   const TaskInfoWidget({
     super.key,
     required this.description,
-    required this.dueDate,
+    this.dueDate,
     required this.difficulty,
     required this.xpValue,
     required this.createdDate,
@@ -100,47 +100,49 @@ class TaskInfoWidget extends StatelessWidget {
           ),
           SizedBox(height: 3.h),
 
-          // Due Date with Countdown
-          Row(
-            children: [
-              CustomIconWidget(
-                iconName: 'schedule',
-                color: colorScheme.primary,
-                size: 20,
-              ),
-              SizedBox(width: 2.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Due Date',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      '${dueDate.day}/${dueDate.month}/${dueDate.year} at ${dueDate.hour.toString().padLeft(2, '0')}:${dueDate.minute.toString().padLeft(2, '0')}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Text(
-                      _formatTimeRemaining(dueDate),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: dueDate.isBefore(DateTime.now())
-                            ? Colors.red
-                            : colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+          if (dueDate != null) ...[
+            // Due Date with Countdown
+            Row(
+              children: [
+                CustomIconWidget(
+                  iconName: 'schedule',
+                  color: colorScheme.primary,
+                  size: 20,
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 2.h),
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Due Date',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${dueDate!.day}/${dueDate!.month}/${dueDate!.year} at ${dueDate!.hour.toString().padLeft(2, '0')}:${dueDate!.minute.toString().padLeft(2, '0')}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        _formatTimeRemaining(dueDate!),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: dueDate!.isBefore(DateTime.now())
+                              ? Colors.red
+                              : colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 2.h),
+          ],
 
           // Difficulty and XP
           Row(

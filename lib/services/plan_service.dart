@@ -84,7 +84,24 @@ class PlanService {
         }
       }
       
-      return allPlansMap.values.toList();
+      // Attach task counts for each plan
+      final plansList = allPlansMap.values.toList();
+      final plansWithCounts = await Future.wait(plansList.map((plan) async {
+        final planId = plan['id'] as String?;
+        if (planId == null) return plan;
+        try {
+          final tasksResponse = await _supabase
+              .from('tasks')
+              .select('id')
+              .eq('plan_id', planId);
+          plan['task_count'] = (tasksResponse as List).length;
+        } catch (e) {
+          plan['task_count'] = 0;
+        }
+        return plan;
+      }));
+      
+      return plansWithCounts;
     } catch (e) {
       rethrow;
     }
