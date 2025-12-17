@@ -47,13 +47,13 @@ class CurrentStreaksWidget extends StatelessWidget {
           Row(
             children: [
               CustomIconWidget(
-                iconName: 'local_fire_department',
-                color: AppTheme.warningLight,
+                  iconName: 'task_alt',
+                  color: AppTheme.successLight,
                 size: 24,
               ),
               SizedBox(width: 2.w),
               Text(
-                'Current Streaks',
+                  'Total Completed',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface,
@@ -122,13 +122,46 @@ class CurrentStreaksWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final fallbackLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final data = weeklyCounts.isNotEmpty
+    final fallbackLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    List<Map<String, dynamic>> data = weeklyCounts.isNotEmpty
         ? weeklyCounts
         : List.generate(7, (index) => {
               'label': fallbackLabels[index % fallbackLabels.length],
               'count': 0,
             });
+
+    // Rotate so today is first (Sun=0 ... Sat=6)
+    if (data.length == 7) {
+      // Attempt to align by date if present
+      data.sort((a, b) {
+        final aDate = a['date'] is DateTime
+            ? a['date'] as DateTime
+            : DateTime.tryParse(a['date']?.toString() ?? '') ?? DateTime.now();
+        final bDate = b['date'] is DateTime
+            ? b['date'] as DateTime
+            : DateTime.tryParse(b['date']?.toString() ?? '') ?? DateTime.now();
+        return aDate.compareTo(bDate);
+      });
+
+      final today = DateTime.now();
+      final todayKey = DateTime(today.year, today.month, today.day);
+      int todayIndex = data.indexWhere((d) {
+        final dt = d['date'] is DateTime
+            ? d['date'] as DateTime
+            : DateTime.tryParse(d['date']?.toString() ?? '') ?? today;
+        final key = DateTime(dt.year, dt.month, dt.day);
+        return key == todayKey;
+      });
+      if (todayIndex == -1) {
+        todayIndex = today.weekday % 7; // Sun=0
+      }
+      if (todayIndex > 0) {
+        data = [
+          ...data.sublist(todayIndex),
+          ...data.sublist(0, todayIndex),
+        ];
+      }
+    }
 
     return SizedBox(
       height: 12.h,
@@ -136,11 +169,11 @@ class CurrentStreaksWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: data.map((day) {
           final count = day['count'] as int? ?? 0;
-          final label = day['label'] as String? ?? '';
+          final label = (day['label'] as String? ?? ' ').substring(0, 1).toUpperCase();
           final isActive = count >= 1;
 
           return Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 label,
@@ -149,6 +182,7 @@ class CurrentStreaksWidget extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              SizedBox(height: 0),
               Container(
                 width: 9.w,
                 height: 9.w,
@@ -185,6 +219,7 @@ class CurrentStreaksWidget extends StatelessWidget {
                   ),
                 ),
               ),
+              SizedBox(height: 0),
             ],
           );
         }).toList(),

@@ -4,7 +4,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import './widgets/current_streaks_widget.dart';
+import './widgets/total_completed_widget.dart';
 import './widgets/greeting_header_widget.dart';
 import './widgets/quick_actions_widget.dart';
 import './widgets/recent_activity_widget.dart';
@@ -293,9 +293,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                       onTaskDelete: _onTaskDelete,
                     ),
                     SizedBox(height: 2.h),
-                    CurrentStreaksWidget(
-                      streaks: _currentStreaks,
-                      onStreakTap: _onStreakTap,
+                    TotalCompletedWidget(
                       weeklyCounts: _weeklyCompletionCounts,
                     ),
                     SizedBox(height: 2.h),

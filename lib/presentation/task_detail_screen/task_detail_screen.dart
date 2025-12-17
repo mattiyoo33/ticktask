@@ -735,6 +735,13 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       setState(() {
         _isLoading = false;
+        // Reset local streak state immediately so UI clears streak dots
+        _streakData = {
+          'current_streak': 0,
+          'max_streak': 0,
+          'week_progress': List<bool>.filled(7, false),
+          'has_streak_bonus': false,
+        };
       });
 
       if (mounted) {
@@ -965,12 +972,19 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         : null;
 
     // Get streak data (default to 0 if no streak exists)
+    final isRecurringTask = _taskData!['is_recurring'] == true;
     final currentStreak = _streakData?['current_streak'] as int? ?? 0;
     final maxStreak = _streakData?['max_streak'] as int? ?? 0;
     final weekProgress = _streakData?['week_progress'] as List<dynamic>?;
-    final weekProgressList = weekProgress != null
+    List<bool> weekProgressList = weekProgress != null
         ? weekProgress.cast<bool>()
         : List<bool>.filled(7, false);
+    // Simplify: show only today's completion status to avoid misaligned data
+    weekProgressList = List<bool>.filled(7, false);
+    if (currentStreak > 0) {
+      final todayIndex = DateTime.now().weekday - 1; // Mon=0 ... Sun=6
+      weekProgressList[todayIndex.clamp(0, 6)] = true;
+    }
     final hasStreakBonus = _streakData?['has_streak_bonus'] == true;
 
     return Scaffold(
@@ -1007,8 +1021,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   nextOccurrence: nextOccurrence,
                 ),
 
-                // Streak Progress (only show if streak exists)
-                if (currentStreak > 0 || maxStreak > 0)
+                // Streak Progress (only for recurring tasks and when streak exists)
+                if (isRecurringTask && (currentStreak > 0 || maxStreak > 0))
                   StreakProgressWidget(
                     currentStreak: currentStreak,
                     maxStreak: maxStreak,

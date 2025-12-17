@@ -125,10 +125,12 @@ class StreakProgressWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
+              // Assume weekProgress[0] = Monday, ..., weekProgress[6] = Sunday
               final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+              final weekdayToday = DateTime.now().weekday - 1; // Mon=0 ... Sun=6
               final isCompleted =
                   index < weekProgress.length ? weekProgress[index] : false;
-              final isToday = index == DateTime.now().weekday - 1;
+              final isToday = index == weekdayToday;
 
               return Column(
                 children: [
