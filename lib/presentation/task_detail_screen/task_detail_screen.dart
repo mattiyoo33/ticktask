@@ -638,6 +638,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       ref.invalidate(activeStreaksProvider);
       ref.invalidate(userProfileFromDbProvider);
       ref.invalidate(recentActivitiesProvider);
+      final planId = _taskData?['plan_id'] as String?;
+      if (planId != null) {
+        ref.invalidate(planStatsProvider(planId));
+        ref.invalidate(planByIdProvider(planId));
+        // Wait for plan stats refresh to update progress bars
+        try {
+          await ref.read(planStatsProvider(planId).future);
+        } catch (e) {
+          debugPrint('⚠️ Error waiting for plan stats refresh after completion: $e');
+        }
+      }
       
       setState(() {
         _isLoading = false;
@@ -697,6 +708,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       final planId = _taskData?['plan_id'] as String?;
       if (planId != null) {
         ref.invalidate(planByIdProvider(planId));
+        ref.invalidate(planStatsProvider(planId));
+        try {
+          await ref.read(planStatsProvider(planId).future);
+        } catch (e) {
+          debugPrint('⚠️ Error waiting for plan stats refresh after mark incomplete: $e');
+        }
       }
       
       // Wait for providers to refresh

@@ -162,6 +162,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         ref.invalidate(activeStreaksProvider);
         ref.invalidate(userProfileFromDbProvider);
         ref.invalidate(recentActivitiesProvider);
+        ref.invalidate(planStatsProvider(planId));
       }
 
       if (mounted) {
@@ -201,10 +202,18 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         ref.invalidate(todaysTasksProvider);
         ref.invalidate(overallUserStreakProvider);
         ref.invalidate(activeStreaksProvider);
+        ref.invalidate(planStatsProvider(planId));
+        // Ensure plan stats refresh is awaited
+        try {
+          await ref.read(planStatsProvider(planId).future);
+        } catch (e) {
+          debugPrint('⚠️ Error waiting for plan stats refresh: $e');
+        }
         
         // Wait for plan to refresh
         try {
           await ref.read(planByIdProvider(planId).future);
+          await ref.read(planStatsProvider(planId).future);
         } catch (e) {
           debugPrint('⚠️ Error refreshing plan after revert: $e');
         }
