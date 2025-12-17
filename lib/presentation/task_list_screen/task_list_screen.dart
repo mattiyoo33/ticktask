@@ -304,6 +304,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     ref.invalidate(recentActivitiesProvider);
     await Future.delayed(const Duration(milliseconds: 1500));
 
+    if (!mounted) return;
     setState(() => _isRefreshing = false);
 
     Fluttertoast.showToast(
@@ -917,10 +918,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       ref.invalidate(overallUserStreakProvider);
       ref.invalidate(activeStreaksProvider);
       
-      setState(() {
-      _selectedTaskIds.clear();
-      _isMultiSelectMode = false;
-    });
+      if (mounted) {
+        setState(() {
+          _selectedTaskIds.clear();
+          _isMultiSelectMode = false;
+        });
+      }
 
       String message;
       if (tasksCompletedLate > 0 && tasksCompletedOnTime > 0) {

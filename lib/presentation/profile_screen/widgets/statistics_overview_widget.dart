@@ -75,14 +75,14 @@ class StatisticsOverviewWidget extends StatelessWidget {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 3.w,
-              mainAxisSpacing: 2.h,
-              childAspectRatio: 1.2,
+              mainAxisSpacing: 1.5.h,
+              childAspectRatio: 1.35,
             ),
             itemCount: stats.length,
             itemBuilder: (context, index) {
               final stat = stats[index];
               return Container(
-                padding: EdgeInsets.all(4.w),
+                padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(4.w),
@@ -101,8 +101,8 @@ class StatisticsOverviewWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 12.w,
-                      height: 12.w,
+                      width: 10.w,
+                      height: 10.w,
                       decoration: BoxDecoration(
                         color: (stat["color"] as Color).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
@@ -115,7 +115,7 @@ class StatisticsOverviewWidget extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 1.5.h),
+                    SizedBox(height: 1.2.h),
                     Text(
                       stat["value"] as String,
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -124,7 +124,7 @@ class StatisticsOverviewWidget extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 0.5.h),
+                    SizedBox(height: 0.4.h),
                     Text(
                       stat["title"] as String,
                       style: theme.textTheme.bodySmall?.copyWith(
