@@ -412,6 +412,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         if (createdPublic) {
           ref.invalidate(publicPlansProvider(const PublicPlanFilters()));
         }
+        // Refresh plan stats (task counts/progress) immediately
+        ref.invalidate(planStatsProvider(createdPlanId));
       }
 
       // Refresh personal task lists
