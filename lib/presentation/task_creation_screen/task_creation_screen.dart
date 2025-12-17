@@ -324,8 +324,40 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       String? createdPlanId;
 
       // Create task in database
-      if (_isPublicTask) {
-        // Create public task
+      if (_planId != null) {
+        // Always create via taskService when adding to a plan (even if plan is public)
+        int? taskOrder;
+        try {
+          final planService = ref.read(planServiceProvider);
+          final plan = await planService.getPlanById(_planId!);
+          final tasks = plan?['tasks'] as List<dynamic>? ?? [];
+          taskOrder = tasks.length;
+        } catch (e) {
+          debugPrint('Error fetching plan for task order: $e');
+        }
+
+        createdTask = await taskService.createTask(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory,
+          difficulty: _selectedDifficulty,
+          dueDate: _selectedDueDate,
+          dueTime: dueTime,
+          xpReward: xpReward,
+          isRecurring: _isRecurring,
+          recurrenceFrequency: _isRecurring ? _recurringFrequency : null,
+          recurrenceInterval: 1,
+          nextOccurrence: nextOccurrence,
+          isCollaborative: _collaborationEnabled,
+          participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
+          planId: _planId,
+          taskOrder: taskOrder,
+          isPublic: null, // inherit from plan (plan_service will set)
+        );
+        createdPublic = createdTask['is_public'] == true;
+        createdPlanId = createdTask['plan_id'] as String?;
+      } else if (_isPublicTask) {
+        // Create standalone public task
         if (_selectedCategoryId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Please select a category for your public task')),
@@ -344,21 +376,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         );
         createdPublic = true;
       } else {
-        // Get task order if adding to a plan
-        int? taskOrder;
-        if (_planId != null) {
-          try {
-            final planService = ref.read(planServiceProvider);
-            final plan = await planService.getPlanById(_planId!);
-            final tasks = plan?['tasks'] as List<dynamic>? ?? [];
-            taskOrder = tasks.length; // Set order to current count
-          } catch (e) {
-            // If plan fetch fails, continue without taskOrder
-            debugPrint('Error fetching plan for task order: $e');
-          }
-        }
-
-        // Create task (public status will be determined by plan if planId is provided)
+        // Private/normal standalone task
         createdTask = await taskService.createTask(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -373,13 +391,12 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           nextOccurrence: nextOccurrence,
           isCollaborative: _collaborationEnabled,
           participantIds: _collaborationEnabled ? _selectedCollaboratorIds : [],
-          planId: _planId,
-          taskOrder: taskOrder,
-          isPublic: _planId != null ? null : _isPublicTask, // If planId exists, let service determine from plan; otherwise use toggle
+          planId: null,
+          taskOrder: null,
+          isPublic: false,
         );
-        // Determine if task is public (either standalone public task or task in public plan)
-        createdPublic = createdTask['is_public'] == true;
-        createdPlanId = createdTask['plan_id'] as String?;
+        createdPublic = false;
+        createdPlanId = null;
       }
 
       // Refresh public feeds for discover
@@ -391,6 +408,10 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       if (createdPlanId != null) {
         ref.invalidate(planByIdProvider(createdPlanId));
         ref.invalidate(allPlansProvider);
+        // If the plan is public, refresh public plans feed so task count updates
+        if (createdPublic) {
+          ref.invalidate(publicPlansProvider(const PublicPlanFilters()));
+        }
       }
 
       // Refresh personal task lists
