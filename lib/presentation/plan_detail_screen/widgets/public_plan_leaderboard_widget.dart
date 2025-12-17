@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../providers/service_providers.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../utils/avatar_utils.dart';
 
-/// Public Task Leaderboard Widget
+/// Public Plan Leaderboard Widget
 /// 
-/// Displays a leaderboard of participants ranked by their contribution and completion count
-class PublicTaskLeaderboardWidget extends ConsumerWidget {
-  final String taskId;
+/// Displays a leaderboard of participants ranked by their XP gained from tasks in this plan
+class PublicPlanLeaderboardWidget extends ConsumerWidget {
+  final String planId;
 
-  const PublicTaskLeaderboardWidget({
+  const PublicPlanLeaderboardWidget({
     super.key,
-    required this.taskId,
+    required this.planId,
   });
 
   @override
@@ -21,9 +24,9 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final currentUser = ref.watch(currentUserProvider).value;
 
-    // Fetch participants using shared provider
+    // Fetch participants using provider
     final participantsFuture = ref.watch(
-      publicTaskParticipantsProvider(taskId),
+      publicPlanParticipantsProvider(planId),
     );
 
     return participantsFuture.when(
@@ -56,22 +59,17 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
           );
         }
 
-        // Sort by task-specific XP (already sorted in service, but ensure consistency)
+        // Sort by plan-specific XP (already sorted in service, but ensure consistency)
         participants.sort((a, b) {
-          final aTaskXp = a['task_xp'] as int? ?? 0;
-          final bTaskXp = b['task_xp'] as int? ?? 0;
-          if (aTaskXp != bTaskXp) {
-            return bTaskXp.compareTo(aTaskXp); // Descending order (highest XP first)
+          final aPlanXp = a['plan_xp'] as int? ?? 0;
+          final bPlanXp = b['plan_xp'] as int? ?? 0;
+          if (aPlanXp != bPlanXp) {
+            return bPlanXp.compareTo(aPlanXp); // Descending order (highest XP first)
           }
-          // If XP is equal, sort by completed_count, then contribution
-          final aCompleted = a['completed_count'] as int? ?? 0;
-          final bCompleted = b['completed_count'] as int? ?? 0;
-          if (aCompleted != bCompleted) {
-            return bCompleted.compareTo(aCompleted);
-          }
-          final aContribution = a['contribution'] as int? ?? 0;
-          final bContribution = b['contribution'] as int? ?? 0;
-          return bContribution.compareTo(aContribution);
+          // If XP is equal, sort by joined_at (earlier join = higher rank)
+          final aJoined = a['joined_at'] as String? ?? '';
+          final bJoined = b['joined_at'] as String? ?? '';
+          return aJoined.compareTo(bJoined);
         });
 
         return Container(
@@ -116,9 +114,8 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
                               profile?['email']?.toString().split('@')[0] ?? 
                               'Unknown';
                   final avatar = profile?['avatar_url'] as String? ?? '';
-                  final taskXp = participant['task_xp'] as int? ?? 0; // Task-specific XP
+                  final planXp = participant['plan_xp'] as int? ?? 0; // Plan-specific XP
                   final level = profile?['level'] as int? ?? 1;
-                  final completedCount = participant['completed_count'] as int? ?? 0;
                   final isCurrentUser = userId == currentUser?.id;
                   final rank = index + 1;
 
@@ -195,7 +192,7 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
                     ),
                     subtitle: Row(
                       children: [
-                        // Show task-specific XP prominently
+                        // Show plan-specific XP prominently
                         CustomIconWidget(
                           iconName: 'star',
                           color: colorScheme.primary,
@@ -203,7 +200,7 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
                         ),
                         SizedBox(width: 1.w),
                         Text(
-                          '$taskXp XP',
+                          '$planXp XP',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
@@ -216,23 +213,6 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        if (completedCount > 0) ...[
-                          SizedBox(width: 3.w),
-                          Text('•', style: theme.textTheme.bodySmall),
-                          SizedBox(width: 3.w),
-                          CustomIconWidget(
-                            iconName: 'check_circle',
-                            color: colorScheme.onSurfaceVariant,
-                            size: 4.w,
-                          ),
-                          SizedBox(width: 1.w),
-                          Text(
-                            '$completedCount completed',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   );
@@ -247,4 +227,3 @@ class PublicTaskLeaderboardWidget extends ConsumerWidget {
     );
   }
 }
-

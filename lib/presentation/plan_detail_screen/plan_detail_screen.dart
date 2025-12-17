@@ -13,6 +13,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../task_detail_screen/widgets/celebration_overlay_widget.dart';
 import 'widgets/plan_header_widget.dart';
 import 'widgets/plan_task_item_widget.dart';
+import 'widgets/public_plan_leaderboard_widget.dart';
 
 class PlanDetailScreen extends ConsumerStatefulWidget {
   const PlanDetailScreen({super.key});
@@ -364,6 +365,13 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                   ),
                   SizedBox(height: 3.h),
                 ],
+                
+                // Leaderboard Section (only for public plans)
+                if (isPublic) ...[
+                  PublicPlanLeaderboardWidget(planId: planId),
+                  SizedBox(height: 3.h),
+                ],
+                
                 // Tasks Section
                 Row(
                   children: [

@@ -385,6 +385,116 @@ class PlanService {
     }
   }
 
+  // Get public plan participants with leaderboard data (plan-specific XP)
+  Future<List<Map<String, dynamic>>> getPublicPlanParticipants(String planId) async {
+    try {
+      // Get plan info to include owner
+      final planResponse = await _supabase
+          .from('plans')
+          .select('user_id')
+          .eq('id', planId)
+          .maybeSingle();
+      
+      final planOwnerId = planResponse?['user_id'] as String?;
+      
+      // Get all participants who joined the public plan
+      final participantsResponse = await _supabase
+          .from('public_plan_participants')
+          .select('*')
+          .eq('plan_id', planId);
+
+      final participants = List<Map<String, dynamic>>.from(participantsResponse);
+      
+      // Add plan owner if not already in participants list
+      if (planOwnerId != null) {
+        final ownerInList = participants.any((p) => p['user_id'] == planOwnerId);
+        if (!ownerInList) {
+          participants.add({
+            'user_id': planOwnerId,
+            'plan_id': planId,
+            'joined_at': planResponse?['created_at'] ?? DateTime.now().toIso8601String(),
+            'is_owner': true,
+          });
+        }
+      }
+      
+      // Get all task IDs in this plan
+      final tasksResponse = await _supabase
+          .from('tasks')
+          .select('id')
+          .eq('plan_id', planId);
+      
+      final planTaskIds = (tasksResponse as List)
+          .map((t) => t['id'] as String)
+          .toList();
+      
+      // Fetch profiles and calculate plan-specific XP
+      final participantsWithProfiles = await Future.wait(
+        participants.map((participant) async {
+          final participantUserId = participant['user_id'] as String?;
+          if (participantUserId != null) {
+            try {
+              final profile = await _supabase
+                  .from('profiles')
+                  .select('id, full_name, avatar_url, total_xp, current_xp, level')
+                  .eq('id', participantUserId)
+                  .maybeSingle();
+              participant['profiles'] = profile;
+              
+              // Calculate plan-specific XP from all tasks in the plan
+              int planXp = 0;
+              if (planTaskIds.isNotEmpty) {
+                try {
+                  final completionsResponse = await _supabase
+                      .from('task_completions')
+                      .select('xp_gained')
+                      .inFilter('task_id', planTaskIds)
+                      .eq('user_id', participantUserId);
+                  
+                  final completions = List<Map<String, dynamic>>.from(completionsResponse);
+                  planXp = completions.fold<int>(
+                    0,
+                    (sum, completion) => sum + (completion['xp_gained'] as int? ?? 0),
+                  );
+                } catch (e) {
+                  print('⚠️ Error calculating plan XP for $participantUserId: $e');
+                }
+              }
+              
+              participant['plan_xp'] = planXp;
+              print('📊 User $participantUserId: $planXp XP from plan $planId');
+            } catch (e) {
+              print('⚠️ Error fetching participant profile for $participantUserId: $e');
+              participant['profiles'] = null;
+              participant['plan_xp'] = 0;
+            }
+          } else {
+            participant['plan_xp'] = 0;
+          }
+          return participant;
+        }),
+      );
+      
+      // Sort by plan-specific XP (descending) for leaderboard ranking
+      participantsWithProfiles.sort((a, b) {
+        final aPlanXp = a['plan_xp'] as int? ?? 0;
+        final bPlanXp = b['plan_xp'] as int? ?? 0;
+        if (aPlanXp != bPlanXp) {
+          return bPlanXp.compareTo(aPlanXp); // Descending order (highest XP first)
+        }
+        // If XP is equal, sort by joined_at (earlier join = higher rank)
+        final aJoined = a['joined_at'] as String? ?? '';
+        final bJoined = b['joined_at'] as String? ?? '';
+        return aJoined.compareTo(bJoined);
+      });
+      
+      return participantsWithProfiles;
+    } catch (e) {
+      print('❌ Error fetching plan participants: $e');
+      rethrow;
+    }
+  }
+
   // Join a public plan
   Future<void> joinPublicPlan(String planId) async {
     if (_userId == null) throw Exception('User not authenticated');

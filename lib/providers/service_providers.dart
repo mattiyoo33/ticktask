@@ -299,6 +299,12 @@ final publicPlansProvider = FutureProvider.family<List<Map<String, dynamic>>, Pu
   return result;
 });
 
+// Public Plan Participants Provider (for leaderboard)
+final publicPlanParticipantsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, planId) async {
+  final planService = ref.watch(planServiceProvider);
+  return await planService.getPublicPlanParticipants(planId);
+});
+
 // Overall User Streak Provider
 final overallUserStreakProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final authState = ref.watch(authStateProvider);

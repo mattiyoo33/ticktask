@@ -296,6 +296,16 @@ class PublicTaskService {
   Future<List<Map<String, dynamic>>> getPublicTaskParticipants(String taskId) async {
     try {
       debugPrint('🔍 Fetching participants for task: $taskId');
+      
+      // Get task info to include owner
+      final taskResponse = await _supabase
+          .from('tasks')
+          .select('user_id, created_at')
+          .eq('id', taskId)
+          .maybeSingle();
+      
+      final taskOwnerId = taskResponse?['user_id'] as String?;
+      
       final response = await _supabase
           .from('public_task_participants')
           .select('*')
@@ -304,7 +314,20 @@ class PublicTaskService {
       final participants = List<Map<String, dynamic>>.from(response);
       debugPrint('📊 Found ${participants.length} participants in database');
       
-      // Fetch profiles separately with XP data
+      // Add task owner if not already in participants list
+      if (taskOwnerId != null) {
+        final ownerInList = participants.any((p) => p['user_id'] == taskOwnerId);
+        if (!ownerInList) {
+          participants.add({
+            'user_id': taskOwnerId,
+            'task_id': taskId,
+            'joined_at': taskResponse?['created_at'] ?? DateTime.now().toIso8601String(),
+            'is_owner': true,
+          });
+        }
+      }
+      
+      // Fetch profiles separately and calculate task-specific XP
       final participantsWithProfiles = await Future.wait(
         participants.map((participant) async {
           final participantUserId = participant['user_id'] as String?;
@@ -316,23 +339,46 @@ class PublicTaskService {
                   .eq('id', participantUserId)
                   .maybeSingle();
               participant['profiles'] = profile;
+              
+              // Calculate task-specific XP from task_completions
+              try {
+                final completionsResponse = await _supabase
+                    .from('task_completions')
+                    .select('xp_gained')
+                    .eq('task_id', taskId)
+                    .eq('user_id', participantUserId);
+                
+                final completions = List<Map<String, dynamic>>.from(completionsResponse);
+                final taskXp = completions.fold<int>(
+                  0,
+                  (sum, completion) => sum + (completion['xp_gained'] as int? ?? 0),
+                );
+                
+                // Add task-specific XP to participant data
+                participant['task_xp'] = taskXp;
+                debugPrint('📊 User $participantUserId: $taskXp XP from task $taskId');
+              } catch (e) {
+                debugPrint('⚠️ Error calculating task XP for $participantUserId: $e');
+                participant['task_xp'] = 0;
+              }
             } catch (e) {
               debugPrint('⚠️ Error fetching participant profile for $participantUserId: $e');
               participant['profiles'] = null;
+              participant['task_xp'] = 0;
             }
+          } else {
+            participant['task_xp'] = 0;
           }
           return participant;
         }),
       );
       
-      // Sort by total_xp (descending) for leaderboard ranking
+      // Sort by task-specific XP (descending) for leaderboard ranking
       participantsWithProfiles.sort((a, b) {
-        final aProfile = a['profiles'] as Map<String, dynamic>?;
-        final bProfile = b['profiles'] as Map<String, dynamic>?;
-        final aXp = aProfile?['total_xp'] as int? ?? 0;
-        final bXp = bProfile?['total_xp'] as int? ?? 0;
-        if (aXp != bXp) {
-          return bXp.compareTo(aXp); // Descending order (highest XP first)
+        final aTaskXp = a['task_xp'] as int? ?? 0;
+        final bTaskXp = b['task_xp'] as int? ?? 0;
+        if (aTaskXp != bTaskXp) {
+          return bTaskXp.compareTo(aTaskXp); // Descending order (highest XP first)
         }
         // If XP is equal, sort by completed_count, then contribution
         final aCompleted = a['completed_count'] as int? ?? 0;
