@@ -46,6 +46,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
   // Public task options
   bool _isPublicTask = false;
   String? _selectedCategoryId; // Category ID for public tasks
+  String? _planCategoryId; // Category inherited from plan (public plan)
+  String? _planCategoryName; // Display name if we fetch it
 
   // Plan options
   String? _planId; // Plan ID if task is being added to a plan
@@ -89,10 +91,13 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           final plan = await planService.getPlanById(planId);
           if (plan != null) {
             final isPlanPublic = plan['is_public'] as bool? ?? false;
+            final planCategoryId = plan['category_id'] as String?;
             setState(() {
               _planId = planId;
               // Automatically set task public status based on plan
               _isPublicTask = isPlanPublic;
+              _planCategoryId = planCategoryId;
+              _selectedCategoryId = planCategoryId; // Inherit category; hide selector
             });
           } else {
             setState(() {
@@ -923,8 +928,8 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
                 ),
                 SizedBox(height: 4.h),
 
-                // Category Selection (for public tasks)
-                if (_isPublicTask) ...[
+                // Category Selection (for standalone public tasks only)
+                if (_isPublicTask && _planId == null) ...[
                   CategorySelectionWidget(
                     selectedCategoryId: _selectedCategoryId,
                     onCategorySelected: (categoryId) {
