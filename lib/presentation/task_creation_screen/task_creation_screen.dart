@@ -51,6 +51,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
 
   // Plan options
   String? _planId; // Plan ID if task is being added to a plan
+  int _planTaskOrder = 0; // Next order for plan tasks
 
   // UI state
   bool _isLoading = false;
@@ -92,12 +93,14 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           if (plan != null) {
             final isPlanPublic = plan['is_public'] as bool? ?? false;
             final planCategoryId = plan['category_id'] as String?;
+            final tasks = plan['tasks'] as List<dynamic>? ?? [];
             setState(() {
               _planId = planId;
               // Automatically set task public status based on plan
               _isPublicTask = isPlanPublic;
               _planCategoryId = planCategoryId;
               _selectedCategoryId = planCategoryId; // Inherit category; hide selector
+              _planTaskOrder = tasks.length;
             });
           } else {
             setState(() {

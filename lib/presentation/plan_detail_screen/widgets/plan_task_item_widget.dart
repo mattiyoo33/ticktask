@@ -12,6 +12,9 @@ class PlanTaskItemWidget extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onComplete;
   final VoidCallback? onRevert;
+  final VoidCallback? onLockedTap;
+  final bool isLocked;
+  final bool isNextUp;
 
   const PlanTaskItemWidget({
     super.key,
@@ -20,6 +23,9 @@ class PlanTaskItemWidget extends StatelessWidget {
     this.onTap,
     this.onComplete,
     this.onRevert,
+    this.onLockedTap,
+    this.isLocked = false,
+    this.isNextUp = false,
   });
 
   String _formatDueTime(String? dueTime) {
@@ -62,7 +68,7 @@ class PlanTaskItemWidget extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: isLocked ? onLockedTap : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: EdgeInsets.all(3.w),
@@ -131,7 +137,33 @@ class PlanTaskItemWidget extends StatelessWidget {
                 ),
               ),
               // Status Indicator / Action Buttons
-              if (isCompleted && onRevert != null)
+              if (isLocked)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CustomIconWidget(
+                        iconName: isNextUp ? 'arrow_forward' : 'lock',
+                        color: colorScheme.onSurfaceVariant,
+                        size: 16,
+                      ),
+                      SizedBox(width: 1.w),
+                      Text(
+                        isNextUp ? 'Next up' : 'Locked',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (isCompleted && onRevert != null)
                 IconButton(
                   onPressed: onRevert,
                   icon: Icon(

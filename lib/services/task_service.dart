@@ -604,6 +604,32 @@ class TaskService {
       final planId = task['plan_id'] as String?;
       final isOwner = taskOwnerId == _userId;
       
+      // If task belongs to a plan, enforce step-by-step order: only first incomplete task can be completed
+      if (planId != null) {
+        try {
+          final orderedTasks = await _supabase
+              .from('tasks')
+              .select('id,status,task_order')
+              .eq('plan_id', planId)
+              .order('task_order', ascending: true)
+              .order('due_time', ascending: true);
+
+          final tasks = List<Map<String, dynamic>>.from(orderedTasks);
+          final firstIncomplete = tasks.firstWhere(
+            (t) => (t['status'] as String? ?? 'active') != 'completed',
+            orElse: () => {},
+          );
+
+          final firstIncompleteId = firstIncomplete['id'] as String?;
+          if (firstIncompleteId != null && firstIncompleteId != taskId) {
+            throw Exception('Complete previous steps in the plan before this task.');
+          }
+        } catch (e) {
+          // If we fail to fetch ordering, proceed to avoid blocking, but log
+          print('⚠️ Plan step enforcement skipped: $e');
+        }
+      }
+      
       // Check if this is a task in a public plan (not owned by current user)
       // For public plan tasks, we don't update the global task status
       final isPublicPlanTask = planId != null && !isOwner;

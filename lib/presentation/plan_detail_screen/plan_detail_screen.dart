@@ -470,10 +470,24 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         if (userCompletedToday) {
                           taskWithUserStatus['status'] = 'completed';
                         }
+                        final isUnlocked = taskWithUserStatus['is_unlocked'] == true;
+                        final isNextUp = taskWithUserStatus['is_next_up'] == true;
                         
                         return PlanTaskItemWidget(
                           task: taskWithUserStatus,
                           index: index,
+                          isLocked: !isUnlocked,
+                          isNextUp: isNextUp,
+                          onLockedTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isNextUp
+                                    ? 'Complete this task to unlock the next one'
+                                    : 'Complete earlier steps to unlock this task'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
                           onTap: () {
                             Navigator.pushNamed(
                               context,
@@ -483,7 +497,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                             HapticFeedback.lightImpact();
                           },
                           // Show completion button if not completed, revert button if completed
-                          onComplete: userCompletedToday 
+                          onComplete: userCompletedToday || !isUnlocked
                               ? null 
                               : () => _handleTaskComplete(taskId),
                           onRevert: userCompletedToday

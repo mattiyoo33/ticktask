@@ -160,6 +160,23 @@ class PlanService {
         // Don't rethrow - allow plan to load even if tasks can't be fetched
       }
 
+      // Compute unlock state: only the first incomplete task is actionable
+      final firstIncompleteIndex =
+          tasksList.indexWhere((task) => (task['status'] as String? ?? 'active') != 'completed');
+
+      tasksList = tasksList.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final task = Map<String, dynamic>.from(entry.value);
+        final status = task['status'] as String? ?? 'active';
+        final isCompleted = status == 'completed';
+        final isNextUp = firstIncompleteIndex == idx && !isCompleted;
+        final isUnlocked = isCompleted || isNextUp || firstIncompleteIndex == -1;
+
+        task['is_next_up'] = isNextUp;
+        task['is_unlocked'] = isUnlocked;
+        return task;
+      }).toList();
+
       final plan = Map<String, dynamic>.from(planResponse);
       plan['tasks'] = tasksList;
       plan['is_owner'] = isOwner; // Add flag to indicate ownership
