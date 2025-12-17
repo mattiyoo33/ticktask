@@ -12,6 +12,7 @@ import './widgets/ai_task_generator_widget.dart';
 import './widgets/select_collaborators_modal_widget.dart';
 import './widgets/category_selection_widget.dart';
 import '../discover_screen/widgets/task_type_choice_modal.dart';
+import '../../providers/service_providers.dart';
 
 class TaskCreationScreen extends ConsumerStatefulWidget {
   const TaskCreationScreen({super.key});
@@ -318,6 +319,10 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         }
       }
 
+      Map<String, dynamic>? createdTask;
+      bool createdPublic = false;
+      String? createdPlanId;
+
       // Create task in database
       if (_isPublicTask) {
         // Create public task
@@ -330,17 +335,14 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         }
 
         final publicTaskService = ref.read(publicTaskServiceProvider);
-        await publicTaskService.createPublicTask(
+        createdTask = await publicTaskService.createPublicTask(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           categoryId: _selectedCategoryId!,
           dueDate: _selectedDueDate,
           difficulty: _selectedDifficulty.toLowerCase(),
         );
-
-        // Refresh public tasks provider - invalidate all possible filter combinations
-        // Since we can't invalidate all family instances, we'll let them refresh naturally
-        // The provider will refetch when the discover page is opened
+        createdPublic = true;
       } else {
         // Get task order if adding to a plan
         int? taskOrder;
@@ -357,7 +359,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
         }
 
         // Create task (public status will be determined by plan if planId is provided)
-        await taskService.createTask(
+        createdTask = await taskService.createTask(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           category: _selectedCategory,
@@ -375,19 +377,25 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
           taskOrder: taskOrder,
           isPublic: _planId != null ? null : _isPublicTask, // If planId exists, let service determine from plan; otherwise use toggle
         );
+        // Determine if task is public (either standalone public task or task in public plan)
+        createdPublic = createdTask['is_public'] == true;
+        createdPlanId = createdTask['plan_id'] as String?;
       }
 
-      // Refresh providers to show new task
-      if (!_isPublicTask) {
-        ref.invalidate(allTasksProvider);
-        ref.invalidate(todaysTasksProvider);
-        
-        // Refresh plan if task was added to a plan
-        if (_planId != null) {
-          ref.invalidate(planByIdProvider(_planId!));
-          ref.invalidate(allPlansProvider);
-        }
+      // Refresh public feeds for discover
+      if (createdPublic) {
+        ref.invalidate(publicTasksProvider(const PublicTaskFilters()));
       }
+
+      // Refresh plan if task was added to a plan
+      if (createdPlanId != null) {
+        ref.invalidate(planByIdProvider(createdPlanId));
+        ref.invalidate(allPlansProvider);
+      }
+
+      // Refresh personal task lists
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(todaysTasksProvider);
 
       // Show success message
       if (mounted) {

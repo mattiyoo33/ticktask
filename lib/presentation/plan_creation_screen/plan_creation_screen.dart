@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../providers/service_providers.dart';
 import '../task_creation_screen/widgets/category_selection_widget.dart';
 
 class PlanCreationScreen extends ConsumerStatefulWidget {
@@ -152,6 +153,11 @@ class _PlanCreationScreenState extends ConsumerState<PlanCreationScreen> {
         isPublic: _isPublicPlan,
         categoryId: _isPublicPlan ? _selectedCategoryId : null,
       );
+
+      // Refresh public plans feed for discover
+      if (_isPublicPlan) {
+        ref.invalidate(publicPlansProvider(const PublicPlanFilters()));
+      }
 
       ref.invalidate(allPlansProvider);
 
