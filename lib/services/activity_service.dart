@@ -29,6 +29,9 @@ class ActivityService {
             )
           ''');
 
+      // Only fetch activities for current user (RLS-friendly)
+      query = query.eq('user_id', _userId!);
+
       if (type != null) {
         query = query.eq('type', type);
       }

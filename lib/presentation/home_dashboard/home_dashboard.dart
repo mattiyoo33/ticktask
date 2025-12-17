@@ -152,6 +152,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     // Refresh profile XP/level and other home data
     ref.invalidate(userProfileFromDbProvider);
     ref.invalidate(todaysTasksProvider);
+    ref.invalidate(recentActivitiesProvider);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
