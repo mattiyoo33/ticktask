@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
 
 class MoreScreen extends ConsumerStatefulWidget {
@@ -66,65 +65,73 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           ),
           SizedBox(height: 3.h),
 
-          // Settings Section (with header)
+          // Settings Section (with header) - compact list style
           _buildSectionHeader(
             context,
             'Settings',
             Icons.settings_outlined,
             colorScheme,
           ),
-          _buildMenuItem(
-            context,
-            title: 'Notifications',
-            subtitle: 'Manage alerts and reminders',
-            icon: Icons.notifications,
-            iconColor: colorScheme.primary,
-            onTap: _handleNotificationSettings,
-          ),
-          SizedBox(height: 1.5.h),
-          _buildMenuItem(
-            context,
-            title: 'Privacy',
-            subtitle: 'Control visibility and data',
-            icon: Icons.privacy_tip,
-            iconColor: colorScheme.primary,
-            onTap: _handlePrivacySettings,
-          ),
-          SizedBox(height: 1.5.h),
-          _buildMenuItem(
-            context,
-            title: 'Theme',
-            subtitle: 'Light / Dark',
-            icon: Icons.palette,
-            iconColor: colorScheme.primary,
-            onTap: _handleThemeSettings,
-          ),
-          SizedBox(height: 1.5.h),
-          _buildMenuItem(
-            context,
-            title: 'Language',
-            subtitle: 'Choose your language',
-            icon: Icons.language,
-            iconColor: colorScheme.primary,
-            onTap: _handleLanguageSettings,
-          ),
-          SizedBox(height: 1.5.h),
-          _buildMenuItem(
-            context,
-            title: 'Quiet Hours',
-            subtitle: 'Do Not Disturb schedule',
-            icon: Icons.bedtime,
-            iconColor: colorScheme.primary,
-            onTap: _handleQuietHours,
-          ),
-          SizedBox(height: 1.5.h),
-          _buildMenuItem(
-            context,
-            title: 'Sign Out',
-            subtitle: 'Sign out of your account',
-            icon: Icons.logout,
-            iconColor: AppTheme.errorLight,
-            onTap: _handleLogout,
+          Container(
+            margin: EdgeInsets.only(top: 1.h),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildSettingsItem(
+                  context,
+                  title: 'Notifications',
+                  icon: Icons.notifications,
+                  iconColor: colorScheme.primary,
+                  onTap: _handleNotificationSettings,
+                ),
+                Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
+                _buildSettingsItem(
+                  context,
+                  title: 'Privacy',
+                  icon: Icons.privacy_tip,
+                  iconColor: colorScheme.primary,
+                  onTap: _handlePrivacySettings,
+                ),
+                Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
+                _buildSettingsItem(
+                  context,
+                  title: 'Theme',
+                  icon: Icons.palette,
+                  iconColor: colorScheme.primary,
+                  onTap: _handleThemeSettings,
+                ),
+                Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
+                _buildSettingsItem(
+                  context,
+                  title: 'Language',
+                  icon: Icons.language,
+                  iconColor: colorScheme.primary,
+                  onTap: _handleLanguageSettings,
+                ),
+                Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
+                _buildSettingsItem(
+                  context,
+                  title: 'Quiet Hours',
+                  icon: Icons.bedtime,
+                  iconColor: colorScheme.primary,
+                  onTap: _handleQuietHours,
+                ),
+                Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
+                _buildSettingsItem(
+                  context,
+                  title: 'Sign Out',
+                  icon: Icons.logout,
+                  iconColor: AppTheme.errorLight,
+                  onTap: _handleLogout,
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 4.h),
         ],
@@ -229,6 +236,36 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSettingsItem(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 0),
+      leading: Icon(icon, color: iconColor, size: 24),
+      title: Text(
+        title,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: iconColor == AppTheme.errorLight 
+              ? AppTheme.errorLight 
+              : colorScheme.onSurface,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: colorScheme.onSurfaceVariant,
+        size: 20,
+      ),
+      onTap: onTap,
     );
   }
 

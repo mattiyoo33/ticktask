@@ -75,14 +75,14 @@ class StatisticsOverviewWidget extends StatelessWidget {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 3.w,
-              mainAxisSpacing: 1.5.h,
-              childAspectRatio: 1.35,
+              mainAxisSpacing: 1.h,
+              childAspectRatio: 1.55, // more width vs height to avoid overflow
             ),
             itemCount: stats.length,
             itemBuilder: (context, index) {
               final stat = stats[index];
               return Container(
-                padding: EdgeInsets.all(3.w),
+                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 2.5.w),
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(4.w),
@@ -98,7 +98,7 @@ class StatisticsOverviewWidget extends StatelessWidget {
                   ],
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Container(
                       width: 10.w,
@@ -115,7 +115,6 @@ class StatisticsOverviewWidget extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 1.2.h),
                     Text(
                       stat["value"] as String,
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -124,7 +123,6 @@ class StatisticsOverviewWidget extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 0.4.h),
                     Text(
                       stat["title"] as String,
                       style: theme.textTheme.bodySmall?.copyWith(
