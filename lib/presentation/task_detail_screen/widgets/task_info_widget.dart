@@ -12,6 +12,7 @@ class TaskInfoWidget extends StatelessWidget {
   final DateTime createdDate;
   final bool isRecurring;
   final String? frequency;
+  final List<String>? recurrenceDays;
   final DateTime? nextOccurrence;
 
   const TaskInfoWidget({
@@ -23,6 +24,7 @@ class TaskInfoWidget extends StatelessWidget {
     required this.createdDate,
     this.isRecurring = false,
     this.frequency,
+    this.recurrenceDays,
     this.nextOccurrence,
   });
 
@@ -57,6 +59,22 @@ class TaskInfoWidget extends StatelessWidget {
     } else {
       return 'Due now';
     }
+  }
+
+  String _formatFrequency(String frequency) {
+    // Capitalize first letter
+    if (frequency.isEmpty) return frequency;
+    final formatted = frequency[0].toUpperCase() + frequency.substring(1).toLowerCase();
+    
+    // For Custom frequency, show selected days as "Every Mon, Wed, Fri" format
+    if (formatted.toLowerCase() == 'custom') {
+      if (recurrenceDays != null && recurrenceDays!.isNotEmpty) {
+        return 'Every ${recurrenceDays!.join(", ")}';
+      }
+      return 'Custom schedule';
+    }
+    
+    return formatted;
   }
 
   @override
@@ -256,7 +274,7 @@ class TaskInfoWidget extends StatelessWidget {
                   if (frequency != null) ...[
                     SizedBox(height: 1.h),
                     Text(
-                      'Frequency: $frequency',
+                      'Frequency: ${_formatFrequency(frequency!)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

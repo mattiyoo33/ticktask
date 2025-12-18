@@ -1018,6 +1018,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   createdDate: createdDate,
                   isRecurring: _taskData!['is_recurring'] == true,
                   frequency: _taskData!['recurrence_frequency'] as String?,
+                  recurrenceDays: _taskData!['recurrence_days'] != null
+                      ? List<String>.from(_taskData!['recurrence_days'] as List)
+                      : null,
                   nextOccurrence: nextOccurrence,
                 ),
 
