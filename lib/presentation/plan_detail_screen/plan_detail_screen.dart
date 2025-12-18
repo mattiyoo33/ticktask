@@ -287,15 +287,6 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             title: 'Plan Details',
             variant: CustomAppBarVariant.standard,
             centerTitle: false,
-            actions: [
-              IconButton(
-                onPressed: _refreshPlan,
-                icon: Icon(
-                  Icons.refresh,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ],
           ),
           body: RefreshIndicator(
             onRefresh: _refreshPlan,
