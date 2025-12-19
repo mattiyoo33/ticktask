@@ -232,14 +232,14 @@ class ConfettiPainter extends CustomPainter {
 
   static Color _getRandomColor(math.Random random) {
     final colors = [
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.yellow,
-      Colors.purple,
-      Colors.orange,
+      const Color(0xFFDD2D4A), // Dark red/maroon
+      const Color(0xFF880D1E), // Darker red
+      const Color(0xFFF49CBB), // Light pink
+      const Color(0xFFF26A8D), // Medium pink
+      const Color(0xFFCBEEF3), // Light blue/cyan
       Colors.pink,
-      Colors.cyan,
+      Colors.orange,
+      Colors.purple,
     ];
     return colors[random.nextInt(colors.length)];
   }

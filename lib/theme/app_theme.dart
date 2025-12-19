@@ -5,29 +5,30 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   AppTheme._();
 
-  // Design System Colors - Warm Neutral Foundation
-  static const Color primaryLight = Color(0xFF8B4B6B); // Burgundy
-  static const Color secondaryLight = Color(0xFF7A9B76); // Soft green
-  static const Color backgroundLight = Color(0xFFFAF8F5); // Warm cream
-  static const Color surfaceLight = Color(0xFFF2EFE8); // Subtle beige
-  static const Color accentLight = Color(0xFFD4B5A0); // Muted rose
-  static const Color textPrimaryLight = Color(0xFF2C2C2C); // Near-black
-  static const Color textSecondaryLight = Color(0xFF6B6B6B); // Medium gray
-  static const Color successLight = Color(0xFF7A9B76); // Matches secondary
-  static const Color warningLight = Color(0xFFC4956C); // Warm amber
-  static const Color errorLight = Color(0xFFA66B6B); // Muted red
+  // Design System Colors - New Color Palette
+  // dd2d4a, 880d1e, f49cbb, f26a8d, cbeef3
+  static const Color primaryLight = Color(0xFFDD2D4A); // Dark red/maroon - Primary brand color
+  static const Color secondaryLight = Color(0xFFF26A8D); // Medium pink - Secondary actions
+  static const Color backgroundLight = Color(0xFFF0F9FA); // Very light blue tint - Background (CBEEF3 with opacity)
+  static const Color surfaceLight = Color(0xFFFFFFFF); // White - Surface
+  static const Color accentLight = Color(0xFFF49CBB); // Light pink - Accents
+  static const Color textPrimaryLight = Color(0xFF1A1A1A); // Near-black - Primary text
+  static const Color textSecondaryLight = Color(0xFF6B6B6B); // Medium gray - Secondary text
+  static const Color successLight = Color(0xFF7A9B76); // Success green
+  static const Color warningLight = Color(0xFFC4956C); // Warning amber
+  static const Color errorLight = Color(0xFF880D1E); // Darker red - Error color
 
-  // Dark theme colors (adapted from light theme)
-  static const Color primaryDark = Color(0xFFB86B8B); // Lighter burgundy
-  static const Color secondaryDark = Color(0xFF9ABB96); // Lighter soft green
-  static const Color backgroundDark = Color(0xFF1A1816); // Dark warm base
-  static const Color surfaceDark = Color(0xFF252218); // Dark beige
-  static const Color accentDark = Color(0xFFE4C5B0); // Lighter muted rose
-  static const Color textPrimaryDark = Color(0xFFF5F5F5); // Near-white
-  static const Color textSecondaryDark = Color(0xFFB0B0B0); // Light gray
-  static const Color successDark = Color(0xFF9ABB96); // Matches secondary
-  static const Color warningDark = Color(0xFFD4A57C); // Lighter warm amber
-  static const Color errorDark = Color(0xFFB67B7B); // Lighter muted red
+  // Dark theme colors (adapted from new palette)
+  static const Color primaryDark = Color(0xFFF26A8D); // Medium pink - Lighter for dark mode
+  static const Color secondaryDark = Color(0xFFF49CBB); // Light pink - Secondary for dark mode
+  static const Color backgroundDark = Color(0xFF1A1A1A); // Dark base
+  static const Color surfaceDark = Color(0xFF2C2C2C); // Dark surface
+  static const Color accentDark = Color(0xFFCBEEF3); // Light blue - Accent for dark mode
+  static const Color textPrimaryDark = Color(0xFFF5F5F5); // Near-white - Primary text
+  static const Color textSecondaryDark = Color(0xFFB0B0B0); // Light gray - Secondary text
+  static const Color successDark = Color(0xFF9ABB96); // Success green for dark mode
+  static const Color warningDark = Color(0xFFD4A57C); // Warning amber for dark mode
+  static const Color errorDark = Color(0xFFDD2D4A); // Dark red - Error for dark mode
 
   // Card and dialog colors
   static const Color cardLight = surfaceLight;

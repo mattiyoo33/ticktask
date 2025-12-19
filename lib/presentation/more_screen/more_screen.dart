@@ -57,7 +57,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             title: 'View Achievements',
             subtitle: 'See your unlocked achievements',
             icon: Icons.emoji_events,
-            iconColor: Colors.amber,
+            iconColor: const Color(0xFFF26A8D), // Medium pink from new palette
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.pushNamed(context, '/achievements-screen');
