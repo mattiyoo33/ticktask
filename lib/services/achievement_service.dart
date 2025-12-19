@@ -116,11 +116,29 @@ class AchievementService {
   // Check First Day achievement (account created today)
   Future<void> _checkFirstDayAchievement() async {
     try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return;
+      if (_userId == null) return;
 
-      final accountCreatedAt = user.createdAt;
-      if (accountCreatedAt == null) return;
+      // Get account creation date from profiles table
+      final profileResponse = await _supabase
+          .from('profiles')
+          .select('created_at')
+          .eq('id', _userId!)
+          .maybeSingle();
+
+      if (profileResponse == null) return;
+
+      final createdAtValue = profileResponse['created_at'];
+      if (createdAtValue == null) return;
+
+      // Handle both DateTime and String formats
+      DateTime accountCreatedAt;
+      if (createdAtValue is DateTime) {
+        accountCreatedAt = createdAtValue;
+      } else if (createdAtValue is String) {
+        accountCreatedAt = DateTime.parse(createdAtValue);
+      } else {
+        return;
+      }
 
       final today = DateTime.now();
       final accountDate = DateTime(
