@@ -4,6 +4,7 @@ import '../services/friend_service.dart';
 import '../services/activity_service.dart';
 import '../services/public_task_service.dart';
 import '../services/plan_service.dart';
+import '../services/achievement_service.dart';
 import 'auth_provider.dart';
 
 // Task Service Provider
@@ -29,6 +30,11 @@ final publicTaskServiceProvider = Provider<PublicTaskService>((ref) {
 // Plan Service Provider
 final planServiceProvider = Provider<PlanService>((ref) {
   return PlanService();
+});
+
+// Achievement Service Provider
+final achievementServiceProvider = Provider<AchievementService>((ref) {
+  return AchievementService();
 });
 
 // Today's Tasks Provider - watches auth state to auto-invalidate on user change
@@ -350,5 +356,22 @@ final weeklyCompletionCountsProvider = FutureProvider<List<Map<String, dynamic>>
 
   final taskService = ref.watch(taskServiceProvider);
   return await taskService.getWeeklyCompletionCounts();
+});
+
+// Achievements Provider - watches auth state to auto-invalidate on user change
+final achievementsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  if (authStateValue?.session == null) {
+    return [];
+  }
+  
+  final achievementService = ref.watch(achievementServiceProvider);
+  
+  // Check and unlock achievements before fetching
+  await achievementService.checkAndUnlockAchievements();
+  
+  return await achievementService.getUnlockedAchievements();
 });
 

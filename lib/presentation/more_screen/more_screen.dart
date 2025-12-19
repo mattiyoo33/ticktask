@@ -45,6 +45,26 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           ),
           SizedBox(height: 2.h),
           
+          // Achievements Section
+          _buildSectionHeader(
+            context,
+            'Achievements',
+            Icons.emoji_events_outlined,
+            colorScheme,
+          ),
+          _buildMenuItem(
+            context,
+            title: 'View Achievements',
+            subtitle: 'See your unlocked achievements',
+            icon: Icons.emoji_events,
+            iconColor: Colors.amber,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(context, '/achievements-screen');
+            },
+          ),
+          SizedBox(height: 2.h),
+          
           // Friends Section
           _buildSectionHeader(
             context,

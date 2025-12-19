@@ -15,6 +15,7 @@ import '../presentation/plans_screen/plans_screen.dart';
 import '../presentation/plan_creation_screen/plan_creation_screen.dart';
 import '../presentation/plan_detail_screen/plan_detail_screen.dart';
 import '../presentation/more_screen/more_screen.dart';
+import '../presentation/achievements_screen/achievements_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -34,6 +35,7 @@ class AppRoutes {
   static const String planCreation = '/plan-creation-screen';
   static const String planDetail = '/plan-detail-screen';
   static const String more = '/more-screen';
+  static const String achievements = '/achievements-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -53,5 +55,6 @@ class AppRoutes {
     planCreation: (context) => const PlanCreationScreen(),
     planDetail: (context) => const PlanDetailScreen(),
     '/more-screen': (context) => const MoreScreen(),
+    achievements: (context) => const AchievementsScreen(),
   };
 }
