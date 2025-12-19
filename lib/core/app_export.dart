@@ -14,5 +14,6 @@ export '../services/ai_service.dart';
 export '../services/public_task_service.dart';
 export '../services/plan_service.dart';
 export '../services/achievement_service.dart';
+export '../services/tutorial_service.dart';
 export '../providers/auth_provider.dart';
 export '../providers/service_providers.dart';

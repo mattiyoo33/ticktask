@@ -145,6 +145,21 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                 Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
                 _buildSettingsItem(
                   context,
+                  title: 'View Tutorial',
+                  icon: Icons.school,
+                  iconColor: colorScheme.primary,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushNamed(
+                      context,
+                      '/tutorial-screen',
+                      arguments: false, // isFirstTime = false (returning user)
+                    );
+                  },
+                ),
+                Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.1)),
+                _buildSettingsItem(
+                  context,
                   title: 'Sign Out',
                   icon: Icons.logout,
                   iconColor: AppTheme.errorLight,

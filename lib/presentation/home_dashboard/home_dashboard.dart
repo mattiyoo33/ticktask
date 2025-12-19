@@ -124,6 +124,29 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
+    
+    // Safety check: redirect to tutorial if not completed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkTutorialCompletion();
+    });
+  }
+
+  Future<void> _checkTutorialCompletion() async {
+    try {
+      // Use ref.read with .future to get the actual future value
+      final hasCompleted = await ref.read(tutorialCompletedProvider.future);
+      
+      if (!hasCompleted && mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.tutorial,
+          arguments: true, // isFirstTime = true
+        );
+      }
+    } catch (e) {
+      debugPrint('Error checking tutorial completion: $e');
+      // Don't block user if check fails
+    }
   }
 
   @override

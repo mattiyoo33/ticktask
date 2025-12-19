@@ -55,6 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ref.invalidate(userProfileFromDbProvider);
         ref.invalidate(currentUserProvider);
         ref.invalidate(userProfileProvider);
+        ref.invalidate(tutorialCompletedProvider);
         
         // Invalidate all data providers to clear any cached data
         ref.invalidate(friendsProvider);
@@ -65,7 +66,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ref.invalidate(pendingCollaborationTasksProvider);
         ref.invalidate(recentActivitiesProvider);
         
-        Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
+        // Check if user has completed tutorial
+        final tutorialService = ref.read(tutorialServiceProvider);
+        final hasCompletedTutorial = await tutorialService.hasCompletedTutorial();
+        
+        if (hasCompletedTutorial) {
+          Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
+        } else {
+          // Show tutorial for first-time users
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.tutorial,
+            arguments: true, // isFirstTime = true
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

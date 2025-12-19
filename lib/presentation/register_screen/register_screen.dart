@@ -74,6 +74,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ref.invalidate(userProfileFromDbProvider);
           ref.invalidate(currentUserProvider);
           ref.invalidate(userProfileProvider);
+          ref.invalidate(tutorialCompletedProvider);
           
           // Invalidate all data providers to clear any cached data
           ref.invalidate(friendsProvider);
@@ -84,8 +85,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ref.invalidate(pendingCollaborationTasksProvider);
           ref.invalidate(recentActivitiesProvider);
           
-          // Go to dashboard
-          Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
+          // New users should see tutorial
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.tutorial,
+            arguments: true, // isFirstTime = true
+          );
         }
       }
     } catch (e) {

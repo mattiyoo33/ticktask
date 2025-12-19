@@ -5,6 +5,7 @@ import '../services/activity_service.dart';
 import '../services/public_task_service.dart';
 import '../services/plan_service.dart';
 import '../services/achievement_service.dart';
+import '../services/tutorial_service.dart';
 import 'auth_provider.dart';
 
 // Task Service Provider
@@ -35,6 +36,11 @@ final planServiceProvider = Provider<PlanService>((ref) {
 // Achievement Service Provider
 final achievementServiceProvider = Provider<AchievementService>((ref) {
   return AchievementService();
+});
+
+// Tutorial Service Provider
+final tutorialServiceProvider = Provider<TutorialService>((ref) {
+  return TutorialService();
 });
 
 // Today's Tasks Provider - watches auth state to auto-invalidate on user change
@@ -373,5 +379,18 @@ final achievementsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) as
   await achievementService.checkAndUnlockAchievements();
   
   return await achievementService.getUnlockedAchievements();
+});
+
+// Tutorial Completion Provider - watches auth state to auto-invalidate on user change
+final tutorialCompletedProvider = FutureProvider<bool>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final authStateValue = authState.value;
+  
+  if (authStateValue?.session == null) {
+    return false;
+  }
+  
+  final tutorialService = ref.watch(tutorialServiceProvider);
+  return await tutorialService.hasCompletedTutorial();
 });
 

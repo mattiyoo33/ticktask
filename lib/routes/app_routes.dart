@@ -16,6 +16,7 @@ import '../presentation/plan_creation_screen/plan_creation_screen.dart';
 import '../presentation/plan_detail_screen/plan_detail_screen.dart';
 import '../presentation/more_screen/more_screen.dart';
 import '../presentation/achievements_screen/achievements_screen.dart';
+import '../presentation/tutorial_screen/tutorial_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -36,6 +37,7 @@ class AppRoutes {
   static const String planDetail = '/plan-detail-screen';
   static const String more = '/more-screen';
   static const String achievements = '/achievements-screen';
+  static const String tutorial = '/tutorial-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -56,5 +58,10 @@ class AppRoutes {
     planDetail: (context) => const PlanDetailScreen(),
     '/more-screen': (context) => const MoreScreen(),
     achievements: (context) => const AchievementsScreen(),
+    tutorial: (context) {
+      // Check if this is first time (from login/register) or returning user (from More)
+      final isFirstTime = ModalRoute.of(context)?.settings.arguments as bool? ?? true;
+      return TutorialScreen(isFirstTime: isFirstTime);
+    },
   };
 }
