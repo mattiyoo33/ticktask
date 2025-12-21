@@ -558,26 +558,10 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             ),
           ),
         ),
+          ),
         ),
-          floatingActionButton: _isOwner
-              ? FloatingActionButton.extended(
-                  onPressed: () {
-                    final planId = ModalRoute.of(context)?.settings.arguments as String?;
-                    if (planId != null) {
-                      _handleAddTask(planId);
-                    }
-                  },
-                  icon: CustomIconWidget(
-                    iconName: 'add',
-                    color: colorScheme.onPrimary,
-                    size: 24,
-                  ),
-                  label: Text('Add Task'),
-                )
-              : null,
-        ),
-      // Celebration Overlay
-      CelebrationOverlayWidget(
+        // Celebration Overlay
+        CelebrationOverlayWidget(
         isVisible: _showCelebration,
         xpGained: _xpGained,
         onAnimationComplete: _onCelebrationComplete,
