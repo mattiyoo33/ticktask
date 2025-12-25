@@ -328,7 +328,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('$title'),
+        title: Text(title),
         content: const Text('This setting will be available soon.'),
         actions: [
           TextButton(
@@ -342,7 +342,118 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
   void _handleNotificationSettings() => _showComingSoonDialog('Notification Settings');
   void _handlePrivacySettings() => _showComingSoonDialog('Privacy Settings');
-  void _handleThemeSettings() => _showComingSoonDialog('Theme Settings');
+  
+  void _handleThemeSettings() {
+    HapticFeedback.lightImpact();
+    final currentThemeMode = ref.read(themeModeProvider);
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Theme'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildThemeOption(
+                context,
+                'Light',
+                Icons.light_mode,
+                ThemeMode.light,
+                currentThemeMode,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOption(
+                context,
+                'Dark',
+                Icons.dark_mode,
+                ThemeMode.dark,
+                currentThemeMode,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOption(
+                context,
+                'System Default',
+                Icons.brightness_auto,
+                ThemeMode.system,
+                currentThemeMode,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  Widget _buildThemeOption(
+    BuildContext context,
+    String title,
+    IconData icon,
+    ThemeMode mode,
+    ThemeMode currentMode,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isSelected = mode == currentMode;
+    
+    return InkWell(
+      onTap: () {
+        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+        Navigator.pop(context);
+        HapticFeedback.lightImpact();
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected 
+                ? colorScheme.primary 
+                : colorScheme.outline.withValues(alpha: 0.2),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: isSelected 
+                      ? colorScheme.primary 
+                      : colorScheme.onSurface,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: colorScheme.primary,
+                size: 20,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
   void _handleLanguageSettings() => _showComingSoonDialog('Language Settings');
   void _handleQuietHours() => _showComingSoonDialog('Quiet Hours');
 
