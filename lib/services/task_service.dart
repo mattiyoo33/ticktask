@@ -619,6 +619,7 @@ class TaskService {
   }
 
   // Delete a task (only allowed for task owner)
+  // This will revert all XP gained from completing this task
   Future<void> deleteTask(String taskId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
@@ -632,12 +633,64 @@ class TaskService {
         throw Exception('Only the task owner can delete this task');
       }
       
+      // Get all completion records for this task by this user before deleting
+      // We need to calculate total XP to revert
+      final completions = await _supabase
+          .from('task_completions')
+          .select('xp_gained')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!);
+      
+      // Calculate total XP gained from this task
+      int totalXpToRevert = 0;
+      if (completions != null && (completions as List).isNotEmpty) {
+        for (final completion in completions) {
+          totalXpToRevert += (completion['xp_gained'] as int? ?? 0);
+        }
+      }
+      
+      // Revert XP if any was gained
+      if (totalXpToRevert > 0) {
+        // Get current user XP
+        final userProfile = await _supabase
+            .from('profiles')
+            .select('current_xp')
+            .eq('id', _userId!)
+            .single();
+
+        final currentXp = userProfile['current_xp'] as int? ?? 0;
+        final newXp = (currentXp - totalXpToRevert).clamp(0, double.infinity).toInt();
+
+        // Update user XP
+        await _supabase
+            .from('profiles')
+            .update({'current_xp': newXp})
+            .eq('id', _userId!);
+        
+        debugPrint('✅ Reverted $totalXpToRevert XP when deleting task $taskId');
+      }
+      
+      // Create activity record for the deletion
+      if (totalXpToRevert > 0) {
+        await _supabase.from('activities').insert({
+          'user_id': _userId!,
+          'type': 'task_deleted',
+          'task_id': taskId,
+          'message': "deleted '${task['title']}' (reverted $totalXpToRevert XP)",
+          'xp_gained': -totalXpToRevert, // Negative to show XP was removed
+        });
+      }
+      
+      // Delete the task (completion records should be cascade deleted by foreign key)
       await _supabase
           .from('tasks')
           .delete()
           .eq('id', taskId)
           .eq('user_id', _userId!);
+      
+      debugPrint('✅ Task $taskId deleted successfully');
     } catch (e) {
+      debugPrint('❌ Error deleting task: $e');
       rethrow;
     }
   }
