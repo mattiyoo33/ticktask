@@ -618,6 +618,33 @@ class TaskService {
     }
   }
 
+  // Get total XP gained from all completions of a task (for displaying in delete dialog)
+  Future<int> getTotalXpFromTask(String taskId) async {
+    if (_userId == null) throw Exception('User not authenticated');
+
+    try {
+      // Get all completion records for this task by this user
+      final completions = await _supabase
+          .from('task_completions')
+          .select('xp_gained')
+          .eq('task_id', taskId)
+          .eq('user_id', _userId!);
+      
+      // Calculate total XP gained from this task
+      int totalXp = 0;
+      if (completions != null && (completions as List).isNotEmpty) {
+        for (final completion in completions) {
+          totalXp += (completion['xp_gained'] as int? ?? 0);
+        }
+      }
+      
+      return totalXp;
+    } catch (e) {
+      debugPrint('Error getting total XP from task: $e');
+      return 0;
+    }
+  }
+
   // Delete a task (only allowed for task owner)
   // This will revert all XP gained from completing this task
   Future<void> deleteTask(String taskId) async {

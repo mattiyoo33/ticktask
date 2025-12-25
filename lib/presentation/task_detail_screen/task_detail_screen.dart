@@ -479,23 +479,70 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     // Save the screen context before showing dialog
     final screenContext = context;
 
+    // Check if task has completions and will revert XP
+    final taskService = ref.read(taskServiceProvider);
+    int totalXpToRevert = 0;
+    try {
+      totalXpToRevert = await taskService.getTotalXpFromTask(_taskId!);
+    } catch (e) {
+      debugPrint('Error getting total XP: $e');
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text(
-            'Are you sure you want to delete this task? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+      builder: (dialogContext) {
+        final theme = Theme.of(context);
+        
+        return AlertDialog(
+          title: const Text('Delete Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Are you sure you want to delete this task? This action cannot be undone.',
+              ),
+              if (totalXpToRevert > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, 
+                           color: Colors.orange, 
+                           size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This will revert $totalXpToRevert XP gained from completing this task.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
 
     // If user confirmed deletion

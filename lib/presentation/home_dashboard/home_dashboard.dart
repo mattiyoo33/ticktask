@@ -226,48 +226,96 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
   }
 
   Future<void> _onTaskDelete(Map<String, dynamic> task) async {
-    showDialog(
+    final taskService = ref.read(taskServiceProvider);
+    final taskId = task['id'] as String;
+    
+    // Check if task has completions and will revert XP
+    int totalXpToRevert = 0;
+    try {
+      totalXpToRevert = await taskService.getTotalXpFromTask(taskId);
+    } catch (e) {
+      debugPrint('Error getting total XP: $e');
+    }
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: Text('Are you sure you want to delete "${task['title']}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (context) {
+        final theme = Theme.of(context);
+        
+        return AlertDialog(
+          title: const Text('Delete Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Are you sure you want to delete "${task['title']}"?'),
+              if (totalXpToRevert > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, 
+                           color: Colors.orange, 
+                           size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This will revert $totalXpToRevert XP gained from completing this task.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                final taskService = ref.read(taskServiceProvider);
-                final taskId = task['id'] as String;
-                await taskService.deleteTask(taskId);
-                
-                // Refresh data
-                ref.invalidate(todaysTasksProvider);
-                
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Task deleted')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error deleting task: ${e.toString()}'),
-                      backgroundColor: AppTheme.errorLight,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
+
+    if (confirmed == true && mounted) {
+      try {
+        await taskService.deleteTask(taskId);
+        
+        // Refresh data
+        ref.invalidate(todaysTasksProvider);
+        ref.invalidate(userProfileFromDbProvider);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Task deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting task: ${e.toString()}'),
+              backgroundColor: AppTheme.errorLight,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _onStreakTap(Map<String, dynamic> streak) {
