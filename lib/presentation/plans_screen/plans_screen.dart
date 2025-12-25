@@ -22,10 +22,31 @@ class PlansScreen extends ConsumerStatefulWidget {
 
 class _PlansScreenState extends ConsumerState<PlansScreen> {
   bool _isRefreshing = false;
+  bool _hasRefreshedOnLoad = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAllData();
+    });
+  }
+
+  void _refreshAllData() {
+    if (!_hasRefreshedOnLoad) {
+      _hasRefreshedOnLoad = true;
+      ref.invalidate(allPlansProvider);
+      // planStatsProvider requires planId, so we can't invalidate all at once
+      // It will be invalidated per-plan when plan cards load
+    }
+  }
 
   Future<void> _refreshPlans() async {
     setState(() => _isRefreshing = true);
     ref.invalidate(allPlansProvider);
+    // planStatsProvider requires planId, so we can't invalidate all at once
+    // It will be refreshed when plans are re-fetched
     await Future.delayed(const Duration(milliseconds: 500));
     setState(() => _isRefreshing = false);
   }

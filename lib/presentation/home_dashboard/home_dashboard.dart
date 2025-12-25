@@ -128,7 +128,19 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     // Safety check: redirect to tutorial if not completed
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkTutorialCompletion();
+      _refreshAllData();
     });
+  }
+
+  void _refreshAllData() {
+    // Refresh all relevant data when screen loads
+    ref.invalidate(userProfileFromDbProvider);
+    ref.invalidate(todaysTasksProvider);
+    ref.invalidate(recentActivitiesProvider);
+    ref.invalidate(allTasksProvider);
+    ref.invalidate(weeklyCompletionCountsProvider);
+    ref.invalidate(overallUserStreakProvider);
+    ref.invalidate(activeStreaksProvider);
   }
 
   Future<void> _checkTutorialCompletion() async {

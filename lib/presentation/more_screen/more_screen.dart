@@ -13,6 +13,25 @@ class MoreScreen extends ConsumerStatefulWidget {
 }
 
 class _MoreScreenState extends ConsumerState<MoreScreen> {
+  bool _hasRefreshedOnLoad = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAllData();
+    });
+  }
+
+  void _refreshAllData() {
+    if (!_hasRefreshedOnLoad) {
+      _hasRefreshedOnLoad = true;
+      // Refresh user profile data
+      ref.invalidate(userProfileFromDbProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

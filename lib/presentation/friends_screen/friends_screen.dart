@@ -100,6 +100,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Refresh data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAllData();
+    });
+  }
+
+  void _refreshAllData() {
+    // Refresh all relevant data when screen loads
+    ref.invalidate(friendsProvider);
+    ref.invalidate(incomingFriendRequestsProvider);
+    ref.invalidate(outgoingFriendRequestsProvider);
   }
 
   @override

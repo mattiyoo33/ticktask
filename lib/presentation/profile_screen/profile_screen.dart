@@ -87,6 +87,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return (100 * (level * level * 1.5)).round();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Refresh data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAllData();
+    });
+  }
+
+  void _refreshAllData() {
+    // Refresh all relevant data when screen loads
+    ref.invalidate(userProfileFromDbProvider);
+    ref.invalidate(allTasksProvider);
+    ref.invalidate(friendsProvider);
+    ref.invalidate(overallUserStreakProvider);
+  }
+
   // Get real statistics from database
   Map<String, dynamic> get statisticsData {
     final tasksAsync = ref.watch(allTasksProvider);

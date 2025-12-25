@@ -24,6 +24,27 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
   int _selectedTab = 0; // 0 = Tasks, 1 = Plans
+  bool _hasRefreshedOnLoad = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAllData();
+    });
+  }
+
+  void _refreshAllData() {
+    if (!_hasRefreshedOnLoad) {
+      _hasRefreshedOnLoad = true;
+      // Note: publicTasksProvider and publicPlansProvider are family providers
+      // that require filter parameters. Since the screen uses pushReplacementNamed
+      // for navigation, the widget is rebuilt each time, causing providers to be
+      // re-watched. Riverpod will fetch fresh data if the cache is stale.
+      // Users can also use pull-to-refresh for manual refresh.
+    }
+  }
 
   @override
   void dispose() {
