@@ -94,11 +94,11 @@ class PlanCardWidget extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                title,
-                                style: theme.textTheme.titleLarge?.copyWith(
+                          title,
+                          style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w700,
-                                  color: colorScheme.onSurface,
-                                ),
+                            color: colorScheme.onSurface,
+                          ),
                               ),
                             ),
                             Consumer(
@@ -258,8 +258,8 @@ class PlanCardWidget extends ConsumerWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                          value: completionPercentage / 100,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
+                        value: completionPercentage / 100,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                           color: colorScheme.primary,
                           minHeight: 8,
                         ),
@@ -269,7 +269,7 @@ class PlanCardWidget extends ConsumerWidget {
                 },
                 loading: () => Center(
                   child: SizedBox(
-                    height: 2.h,
+                  height: 2.h,
                     width: 2.h,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,

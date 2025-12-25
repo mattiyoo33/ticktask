@@ -143,12 +143,12 @@ class PlanService {
       List<Map<String, dynamic>> tasksList = [];
       
       try {
-        final tasksResponse = await _supabase
-            .from('tasks')
-            .select()
-            .eq('plan_id', planId)
-            .order('task_order', ascending: true)
-            .order('due_time', ascending: true);
+      final tasksResponse = await _supabase
+          .from('tasks')
+          .select()
+          .eq('plan_id', planId)
+          .order('task_order', ascending: true)
+          .order('due_time', ascending: true);
         
         tasksList = List<Map<String, dynamic>>.from(tasksResponse);
         print('✅ Fetched ${tasksList.length} tasks for plan $planId (isOwner: $isOwner, userId: $_userId, planOwnerId: $planOwnerId)');

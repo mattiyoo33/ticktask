@@ -694,7 +694,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       // Otherwise, just update the status
       final hasCompletedToday = await taskService.hasCompletedTaskToday(_taskId!);
       
+      bool wasFirstCompletion = false;
       if (hasCompletedToday) {
+        // Check if this was the first/only completion before reverting
+        final supabase = SupabaseService.client;
+        final allCompletions = await supabase
+            .from('task_completions')
+            .select('id')
+            .eq('task_id', _taskId!)
+            .eq('user_id', supabase.auth.currentUser!.id);
+        wasFirstCompletion = (allCompletions as List).length == 1;
+        
         // Revert today's completion (removes completion record and reverses XP)
         await taskService.revertTaskCompletion(_taskId!);
         
@@ -707,6 +717,19 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       // Refresh task data to update completion status
       await _loadTaskData();
+      
+      // If this was the first completion and we reverted it, reset streak data
+      // The database might not have updated the streak yet, so we manually reset it
+      if (wasFirstCompletion && hasCompletedToday) {
+        setState(() {
+          _streakData = {
+            'current_streak': 0,
+            'max_streak': 0,
+            'week_progress': List<bool>.filled(7, false),
+            'has_streak_bonus': false,
+          };
+        });
+      }
       
       // Refresh task lists and streaks
       ref.invalidate(allTasksProvider);
@@ -735,13 +758,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       setState(() {
         _isLoading = false;
-        // Reset local streak state immediately so UI clears streak dots
-        _streakData = {
-          'current_streak': 0,
-          'max_streak': 0,
-          'week_progress': List<bool>.filled(7, false),
-          'has_streak_bonus': false,
-        };
       });
 
       if (mounted) {
@@ -1024,8 +1040,13 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   nextOccurrence: nextOccurrence,
                 ),
 
-                // Streak Progress (only for recurring tasks and when streak exists)
-                if (isRecurringTask && (currentStreak > 0 || maxStreak > 0))
+                // Streak Progress (only for recurring tasks and when there's an active streak)
+                // Show widget only when currentStreak > 0
+                // When reverting the first completion on the same day, current_streak becomes 0,
+                // so the widget will be hidden (correct behavior).
+                // When reverting on a different day, current_streak should reflect previous completions,
+                // so if there's history, it will still show.
+                if (isRecurringTask && currentStreak > 0)
                   StreakProgressWidget(
                     currentStreak: currentStreak,
                     maxStreak: maxStreak,

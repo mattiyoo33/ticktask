@@ -39,42 +39,42 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       data: (tasks) {
         debugPrint('📊 _allTasks: Received ${tasks.length} tasks from provider');
         final mapped = tasks.map((task) {
-          final dueDate = task['due_date'] != null 
-              ? DateTime.parse(task['due_date'] as String)
-              : null;
-          final createdAt = task['created_at'] != null
-              ? DateTime.parse(task['created_at'] as String)
-              : DateTime.now();
-          
-          // Determine status
-          String status = task['status'] as String? ?? 'active';
-          if (status == 'active' && dueDate != null && dueDate.isBefore(DateTime.now())) {
-            status = 'overdue';
-          }
+        final dueDate = task['due_date'] != null 
+            ? DateTime.parse(task['due_date'] as String)
+            : null;
+        final createdAt = task['created_at'] != null
+            ? DateTime.parse(task['created_at'] as String)
+            : DateTime.now();
+        
+        // Determine status
+        String status = task['status'] as String? ?? 'active';
+        if (status == 'active' && dueDate != null && dueDate.isBefore(DateTime.now())) {
+          status = 'overdue';
+        }
           
           // Extract plan information
           final planData = task['plans'] as Map<String, dynamic>?;
           final planId = task['plan_id'] as String?;
           final planTitle = planData?['title'] as String?;
-          
-          return {
-            'id': task['id'].toString(),
-            'title': task['title'] ?? '',
-            'description': task['description'] ?? '',
-            'dueDate': dueDate,
-            'due_date': task['due_date'], // Keep original for compatibility
-            'difficulty': task['difficulty'] ?? 'Medium',
-            'status': status,
-            'isRecurring': task['is_recurring'] ?? false,
-            'is_collaborative': task['is_collaborative'] ?? false, // CRITICAL: Include collaborative flag
-            'is_public': task['is_public'] ?? false, // Include public flag
-            'xpReward': task['xp_reward'] ?? 10,
-            'category': task['category'] ?? '',
-            'createdAt': createdAt,
+        
+        return {
+          'id': task['id'].toString(),
+          'title': task['title'] ?? '',
+          'description': task['description'] ?? '',
+          'dueDate': dueDate,
+          'due_date': task['due_date'], // Keep original for compatibility
+          'difficulty': task['difficulty'] ?? 'Medium',
+          'status': status,
+          'isRecurring': task['is_recurring'] ?? false,
+          'is_collaborative': task['is_collaborative'] ?? false, // CRITICAL: Include collaborative flag
+          'is_public': task['is_public'] ?? false, // Include public flag
+          'xpReward': task['xp_reward'] ?? 10,
+          'category': task['category'] ?? '',
+          'createdAt': createdAt,
             'plan_id': planId,
             'plan_title': planTitle,
             'task_order': task['task_order'] as int?, // for plan sequencing
-          };
+        };
         }).toList();
 
         // For plan tasks, show only the next actionable task per plan (first incomplete)
@@ -919,10 +919,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       ref.invalidate(activeStreaksProvider);
       
       if (mounted) {
-        setState(() {
-          _selectedTaskIds.clear();
-          _isMultiSelectMode = false;
-        });
+      setState(() {
+      _selectedTaskIds.clear();
+      _isMultiSelectMode = false;
+    });
       }
 
       String message;

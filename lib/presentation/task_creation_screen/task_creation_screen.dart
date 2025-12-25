@@ -94,7 +94,7 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
             final isPlanPublic = plan['is_public'] as bool? ?? false;
             final planCategoryId = plan['category_id'] as String?;
             final tasks = plan['tasks'] as List<dynamic>? ?? [];
-            setState(() {
+        setState(() {
               _planId = planId;
               // Automatically set task public status based on plan
               _isPublicTask = isPlanPublic;
@@ -104,9 +104,9 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
             });
           } else {
             setState(() {
-              _planId = planId;
-            });
-          }
+          _planId = planId;
+        });
+      }
         } catch (e) {
           debugPrint('Error fetching plan: $e');
           setState(() {
@@ -413,11 +413,11 @@ class _TaskCreationScreenState extends ConsumerState<TaskCreationScreen>
       if (createdPublic) {
         ref.invalidate(publicTasksProvider(const PublicTaskFilters()));
       }
-
-      // Refresh plan if task was added to a plan
+        
+        // Refresh plan if task was added to a plan
       if (createdPlanId != null) {
         ref.invalidate(planByIdProvider(createdPlanId));
-        ref.invalidate(allPlansProvider);
+          ref.invalidate(allPlansProvider);
         // If the plan is public, refresh public plans feed so task count updates
         if (createdPublic) {
           ref.invalidate(publicPlansProvider(const PublicPlanFilters()));

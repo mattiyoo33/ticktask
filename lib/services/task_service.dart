@@ -157,9 +157,124 @@ class TaskService {
         return 0;
       });
       
+      // Reset recurring tasks that have passed their next occurrence
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      for (final task in result) {
+        if (task['is_recurring'] == true && task['status'] == 'completed') {
+          final nextOccurrenceStr = task['next_occurrence'] as String?;
+          if (nextOccurrenceStr != null) {
+            try {
+              final nextOccurrence = DateTime.parse(nextOccurrenceStr);
+              final nextOccurrenceDate = DateTime(nextOccurrence.year, nextOccurrence.month, nextOccurrence.day);
+              
+              // If next occurrence has arrived (today or in the past), reset the task
+              if (nextOccurrenceDate.isBefore(today) || nextOccurrenceDate.isAtSameMomentAs(today)) {
+                final resetData = await _resetRecurringTask(task['id'] as String, task);
+                if (resetData != null) {
+                  // Update the task in the result list
+                  task['status'] = 'active';
+                  task['due_date'] = resetData['due_date'] as String;
+                  if (resetData['next_occurrence'] != null && resetData['next_occurrence'].toString().isNotEmpty) {
+                    task['next_occurrence'] = resetData['next_occurrence'] as String;
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('Error parsing next_occurrence for task ${task['id']}: $e');
+            }
+          }
+        }
+      }
+      
       return result;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Reset a recurring task when next occurrence has arrived
+  // Returns the updated due_date and next_occurrence, or null if reset failed
+  Future<Map<String, String>?> _resetRecurringTask(String taskId, Map<String, dynamic> task) async {
+    try {
+      final frequency = task['recurrence_frequency'] as String?;
+      final currentNextOccurrenceStr = task['next_occurrence'] as String?;
+      final recurrenceDays = task['recurrence_days'] as List<dynamic>?;
+      
+      if (currentNextOccurrenceStr == null) return null;
+      
+      final currentNextOccurrence = DateTime.parse(currentNextOccurrenceStr);
+      final newDueDate = DateTime(currentNextOccurrence.year, currentNextOccurrence.month, currentNextOccurrence.day);
+      
+      // Calculate the next occurrence after this one
+      DateTime? newNextOccurrence;
+      
+      if (frequency == 'Daily') {
+        newNextOccurrence = newDueDate.add(const Duration(days: 1));
+      } else if (frequency == 'Weekly') {
+        newNextOccurrence = newDueDate.add(const Duration(days: 7));
+      } else if (frequency == 'Monthly') {
+        newNextOccurrence = DateTime(
+          newDueDate.year,
+          newDueDate.month + 1,
+          newDueDate.day,
+        );
+      } else if (frequency == 'Custom' && recurrenceDays != null && recurrenceDays.isNotEmpty) {
+        // For custom frequency, find the next selected day
+        // Dart weekday: Monday=1, Tuesday=2, ..., Sunday=7
+        final dayMap = {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7};
+        final selectedDayNumbers = recurrenceDays
+            .map((d) => dayMap[d.toString()])
+            .where((d) => d != null)
+            .cast<int>()
+            .toList()..sort();
+        
+        if (selectedDayNumbers.isNotEmpty) {
+          // Find next occurrence day starting from tomorrow
+          DateTime candidate = newDueDate.add(const Duration(days: 1));
+          int attempts = 0;
+          while (attempts < 14) { // Check up to 2 weeks ahead
+            if (selectedDayNumbers.contains(candidate.weekday)) {
+              newNextOccurrence = DateTime(candidate.year, candidate.month, candidate.day);
+              break;
+            }
+            candidate = candidate.add(const Duration(days: 1));
+            attempts++;
+          }
+          // Fallback: if we didn't find one in 2 weeks, go to next week's first selected day
+          if (newNextOccurrence == null && selectedDayNumbers.isNotEmpty) {
+            final daysUntilNext = (selectedDayNumbers.first - newDueDate.weekday + 7) % 7;
+            final daysToAdd = daysUntilNext == 0 ? 7 : daysUntilNext;
+            newNextOccurrence = newDueDate.add(Duration(days: daysToAdd));
+          }
+        }
+      }
+      
+      // Update the task
+      final updates = <String, dynamic>{
+        'status': 'active',
+        'due_date': newDueDate.toIso8601String(),
+      };
+      
+      if (newNextOccurrence != null) {
+        updates['next_occurrence'] = newNextOccurrence.toIso8601String();
+      }
+      
+      await _supabase
+          .from('tasks')
+          .update(updates)
+          .eq('id', taskId);
+      
+      debugPrint('✅ Reset recurring task $taskId: due_date=${newDueDate.toIso8601String()}, next_occurrence=${newNextOccurrence?.toIso8601String()}');
+      
+      return {
+        'due_date': newDueDate.toIso8601String(),
+        'next_occurrence': newNextOccurrence?.toIso8601String() ?? '',
+      };
+    } catch (e) {
+      debugPrint('Error resetting recurring task $taskId: $e');
+      return null; // Return null if reset failed
     }
   }
 

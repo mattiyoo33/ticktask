@@ -424,18 +424,18 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         SizedBox(height: 2.h),
                         // Only show add task button if owner
                         if (_isOwner)
-                          ElevatedButton.icon(
-                            onPressed: () => _handleAddTask(planId),
-                            icon: CustomIconWidget(
-                              iconName: 'add',
-                              color: colorScheme.onPrimary,
-                              size: 18,
-                            ),
-                            label: Text('Add Task'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: colorScheme.primary,
-                              foregroundColor: colorScheme.onPrimary,
-                            ),
+                        ElevatedButton.icon(
+                          onPressed: () => _handleAddTask(planId),
+                          icon: CustomIconWidget(
+                            iconName: 'add',
+                            color: colorScheme.onPrimary,
+                            size: 18,
+                          ),
+                          label: Text('Add Task'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                          ),
                           )
                         else
                           Text(
@@ -444,7 +444,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                               color: colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
-                          ),
+                        ),
                       ],
                     ),
                   )
@@ -473,9 +473,9 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         final isUnlocked = taskWithUserStatus['is_unlocked'] == true;
                         final isNextUp = taskWithUserStatus['is_next_up'] == true;
                         
-                        return PlanTaskItemWidget(
+                    return PlanTaskItemWidget(
                           task: taskWithUserStatus,
-                          index: index,
+                      index: index,
                           isLocked: !isUnlocked,
                           isNextUp: isNextUp,
                           onLockedTap: () {
@@ -488,14 +488,14 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                               ),
                             );
                           },
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/task-detail-screen',
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/task-detail-screen',
                               arguments: taskWithUserStatus, // Pass the full task object, not just the ID
-                            );
-                            HapticFeedback.lightImpact();
-                          },
+                        );
+                        HapticFeedback.lightImpact();
+                      },
                           // Show completion button if not completed, revert button if completed
                           onComplete: userCompletedToday || !isUnlocked
                               ? null 
@@ -560,8 +560,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         ),
           ),
         ),
-        // Celebration Overlay
-        CelebrationOverlayWidget(
+      // Celebration Overlay
+      CelebrationOverlayWidget(
         isVisible: _showCelebration,
         xpGained: _xpGained,
         onAnimationComplete: _onCelebrationComplete,

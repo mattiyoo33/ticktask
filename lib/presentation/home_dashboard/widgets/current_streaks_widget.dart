@@ -45,22 +45,22 @@ class CurrentStreaksWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              CustomIconWidget(
+              children: [
+                CustomIconWidget(
                   iconName: 'task_alt',
                   color: AppTheme.successLight,
-                size: 24,
-              ),
-              SizedBox(width: 2.w),
-              Text(
-                  'Total Completed',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
+                  size: 24,
                 ),
-              ),
-            ],
-          ),
+                SizedBox(width: 2.w),
+                Text(
+                  'Total Completed',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
           SizedBox(height: 1.5.h),
           _buildWeeklyCompletionCircles(context),
           SizedBox(height: 1.5.h),
@@ -93,9 +93,9 @@ class CurrentStreaksWidget extends StatelessWidget {
             child: Text(
               'No streak yet — finish a recurring task to start one.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+              color: colorScheme.onSurfaceVariant,
             ),
+          ),
           ),
         ],
       ),

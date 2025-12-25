@@ -119,47 +119,47 @@ class TaskInfoWidget extends StatelessWidget {
           SizedBox(height: 3.h),
 
           if (dueDate != null) ...[
-            // Due Date with Countdown
-            Row(
-              children: [
-                CustomIconWidget(
-                  iconName: 'schedule',
-                  color: colorScheme.primary,
-                  size: 20,
-                ),
-                SizedBox(width: 2.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Due Date',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurface,
-                        ),
+          // Due Date with Countdown
+          Row(
+            children: [
+              CustomIconWidget(
+                iconName: 'schedule',
+                color: colorScheme.primary,
+                size: 20,
+              ),
+              SizedBox(width: 2.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Due Date',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface,
                       ),
-                      Text(
+                    ),
+                    Text(
                         '${dueDate!.day}/${dueDate!.month}/${dueDate!.year} at ${dueDate!.hour.toString().padLeft(2, '0')}:${dueDate!.minute.toString().padLeft(2, '0')}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      Text(
+                    ),
+                    Text(
                         _formatTimeRemaining(dueDate!),
-                        style: theme.textTheme.bodySmall?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                           color: dueDate!.isBefore(DateTime.now())
-                              ? Colors.red
-                              : colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                            ? Colors.red
+                            : colorScheme.primary,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: 2.h),
+              ),
+            ],
+          ),
+          SizedBox(height: 2.h),
           ],
 
           // Difficulty and XP

@@ -193,26 +193,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate(
                   [
-                    ProfileHeaderWidget(
-                      userData: userData,
-                      onEditProfile: _handleEditProfile,
-                      onChangeAvatar: _handleChangeAvatar,
-                    ),
-                    SizedBox(height: 2.h),
-                    StatisticsOverviewWidget(
-                      statisticsData: statisticsData,
-                    ),
-                    SizedBox(height: 2.h),
-                    AchievementGalleryWidget(
-                      achievements: achievements,
-                    ),
-                    SizedBox(height: 2.h),
-                    ActivityHistoryWidget(
-                      activities: activities,
-                    ),
-                    SizedBox(height: 10.h), // Bottom padding for navigation
-                  ],
-                ),
+              ProfileHeaderWidget(
+                userData: userData,
+                onEditProfile: _handleEditProfile,
+                onChangeAvatar: _handleChangeAvatar,
+              ),
+              SizedBox(height: 2.h),
+              StatisticsOverviewWidget(
+                statisticsData: statisticsData,
+              ),
+              SizedBox(height: 2.h),
+              AchievementGalleryWidget(
+                achievements: achievements,
+              ),
+              SizedBox(height: 2.h),
+              ActivityHistoryWidget(
+                activities: activities,
+              ),
+              SizedBox(height: 10.h), // Bottom padding for navigation
+            ],
+          ),
               ),
             ),
           ],
