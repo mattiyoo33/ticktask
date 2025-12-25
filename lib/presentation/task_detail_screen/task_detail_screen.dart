@@ -494,7 +494,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         final theme = Theme.of(context);
         
         return AlertDialog(
-          title: const Text('Delete Task'),
+        title: const Text('Delete Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,16 +531,16 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               ],
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
         );
       },
     );
@@ -759,7 +759,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         await Future.delayed(const Duration(milliseconds: 300));
       } else {
         // Just update status if no completion record exists
-        await taskService.updateTask(_taskId!, status: 'active');
+      await taskService.updateTask(_taskId!, status: 'active');
       }
       
       // Refresh task data to update completion status

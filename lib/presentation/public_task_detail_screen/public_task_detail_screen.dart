@@ -213,7 +213,7 @@ class _PublicTaskDetailScreenState extends ConsumerState<PublicTaskDetailScreen>
         final theme = Theme.of(context);
         
         return AlertDialog(
-          title: const Text('Delete Task'),
+        title: const Text('Delete Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,16 +248,16 @@ class _PublicTaskDetailScreenState extends ConsumerState<PublicTaskDetailScreen>
               ],
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
         );
       },
     );

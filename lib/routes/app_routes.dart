@@ -17,6 +17,7 @@ import '../presentation/plan_detail_screen/plan_detail_screen.dart';
 import '../presentation/more_screen/more_screen.dart';
 import '../presentation/achievements_screen/achievements_screen.dart';
 import '../presentation/tutorial_screen/tutorial_screen.dart';
+import '../presentation/notification_settings_screen/notification_settings_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const String more = '/more-screen';
   static const String achievements = '/achievements-screen';
   static const String tutorial = '/tutorial-screen';
+  static const String notificationSettings = '/notification-settings-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -63,5 +65,6 @@ class AppRoutes {
       final isFirstTime = ModalRoute.of(context)?.settings.arguments as bool? ?? true;
       return TutorialScreen(isFirstTime: isFirstTime);
     },
+    notificationSettings: (context) => const NotificationSettingsScreen(),
   };
 }

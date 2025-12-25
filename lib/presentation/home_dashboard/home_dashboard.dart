@@ -243,7 +243,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
         final theme = Theme.of(context);
         
         return AlertDialog(
-          title: const Text('Delete Task'),
+        title: const Text('Delete Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,12 +278,12 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
               ],
             ],
           ),
-          actions: [
-            TextButton(
+        actions: [
+          TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
+            child: const Text('Cancel'),
+          ),
+          TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Delete'),
             ),
@@ -294,27 +294,27 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
 
     if (confirmed == true && mounted) {
       try {
-        await taskService.deleteTask(taskId);
-        
-        // Refresh data
-        ref.invalidate(todaysTasksProvider);
+                await taskService.deleteTask(taskId);
+                
+                // Refresh data
+                ref.invalidate(todaysTasksProvider);
         ref.invalidate(userProfileFromDbProvider);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task deleted')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting task: ${e.toString()}'),
-              backgroundColor: AppTheme.errorLight,
-            ),
-          );
-        }
-      }
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Task deleted')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting task: ${e.toString()}'),
+                      backgroundColor: AppTheme.errorLight,
+                    ),
+                  );
+                }
+              }
     }
   }
 

@@ -18,3 +18,4 @@ export '../services/tutorial_service.dart';
 export '../providers/auth_provider.dart';
 export '../providers/service_providers.dart';
 export '../providers/theme_provider.dart';
+export '../providers/notification_settings_provider.dart';

@@ -413,7 +413,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         final theme = Theme.of(context);
         
         return AlertDialog(
-          title: const Text('Delete Task'),
+        title: const Text('Delete Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,12 +448,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
               ],
             ],
           ),
-          actions: [
-            TextButton(
+        actions: [
+          TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
@@ -467,25 +467,25 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
 
     if (confirmed == true) {
       try {
-        await taskService.deleteTask(taskId);
-        
-        // Refresh data
-        ref.invalidate(allTasksProvider);
-        ref.invalidate(todaysTasksProvider);
-        
-        Fluttertoast.showToast(
-          msg: "Task deleted",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        );
-        HapticFeedback.heavyImpact();
-      } catch (e) {
-        Fluttertoast.showToast(
-          msg: "Error deleting task: ${e.toString()}",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        );
-      }
+                await taskService.deleteTask(taskId);
+                
+                // Refresh data
+                ref.invalidate(allTasksProvider);
+                ref.invalidate(todaysTasksProvider);
+                
+              Fluttertoast.showToast(
+                msg: "Task deleted",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+              );
+              HapticFeedback.heavyImpact();
+              } catch (e) {
+                Fluttertoast.showToast(
+                  msg: "Error deleting task: ${e.toString()}",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              }
     }
   }
 

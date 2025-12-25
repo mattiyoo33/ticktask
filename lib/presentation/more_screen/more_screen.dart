@@ -340,7 +340,10 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
     );
   }
 
-  void _handleNotificationSettings() => _showComingSoonDialog('Notification Settings');
+  void _handleNotificationSettings() {
+    HapticFeedback.lightImpact();
+    Navigator.pushNamed(context, '/notification-settings-screen');
+  }
   void _handlePrivacySettings() => _showComingSoonDialog('Privacy Settings');
   
   void _handleThemeSettings() {
