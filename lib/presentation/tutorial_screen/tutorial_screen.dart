@@ -107,6 +107,12 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
       final tutorialService = ref.read(tutorialServiceProvider);
       await tutorialService.markTutorialCompleted();
       
+      // CRITICAL: Invalidate the provider to ensure fresh data is fetched
+      ref.invalidate(tutorialCompletedProvider);
+      
+      // Wait for the provider to refresh to prevent race condition
+      await ref.read(tutorialCompletedProvider.future);
+      
       if (mounted) {
         HapticFeedback.mediumImpact();
         if (widget.isFirstTime) {

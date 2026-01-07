@@ -120,3 +120,6 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     await updateSettings(newSettings);
   }
 }
+
+
+
