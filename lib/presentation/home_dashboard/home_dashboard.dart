@@ -65,14 +65,23 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
   List<Map<String, dynamic>> get _todaysTasks {
     final tasksAsync = ref.watch(todaysTasksProvider);
     return tasksAsync.when(
-      data: (tasks) => tasks.map((task) => {
-        'id': task['id'],
-        'title': task['title'] ?? '',
-        'description': task['description'] ?? '',
-        'difficulty': (task['difficulty'] as String?)?.toLowerCase() ?? 'medium',
-        'dueTime': task['due_time'] ?? '',
-        'isCompleted': task['status'] == 'completed',
-        'xpReward': task['xp_reward'] ?? 10,
+      data: (tasks) => tasks.map((task) {
+        // For recurring tasks, completion status is already correctly set in getTodaysTasks
+        // based on today's completion record, not task status
+        final isRecurring = task['is_recurring'] == true;
+        final status = task['status'] as String?;
+        final isCompleted = status == 'completed';
+        
+        return {
+          'id': task['id'],
+          'title': task['title'] ?? '',
+          'description': task['description'] ?? '',
+          'difficulty': (task['difficulty'] as String?)?.toLowerCase() ?? 'medium',
+          'dueTime': task['due_time'] ?? '',
+          'isCompleted': isCompleted,
+          'xpReward': task['xp_reward'] ?? 10,
+          'isRecurring': isRecurring,
+        };
       }).toList(),
       loading: () => [],
       error: (_, __) => [],

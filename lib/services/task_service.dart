@@ -288,15 +288,27 @@ class TaskService {
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
       // Get owned tasks (exclude plan tasks)
-      final ownedTasks = await _supabase
+      // For recurring tasks, include even if status is 'completed' - we'll check completion for today separately
+      var ownedTasksQuery = _supabase
           .from('tasks')
           .select()
           .eq('user_id', _userId!)
           .isFilter('plan_id', null) // Exclude tasks that belong to a plan
-          .inFilter('status', ['active', 'scheduled'])
-          .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})')
-          .order('due_time', ascending: true)
-          .order('due_date', ascending: true);
+          .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})');
+      
+      final ownedTasksRaw = await ownedTasksQuery.order('due_time', ascending: true).order('due_date', ascending: true);
+      
+      // Filter: include non-recurring tasks with active/scheduled status, or recurring tasks
+      final ownedTasks = (ownedTasksRaw as List<dynamic>).where((task) {
+        final taskMap = task as Map<String, dynamic>;
+        final isRecurring = taskMap['is_recurring'] == true;
+        final status = taskMap['status'] as String?;
+        if (isRecurring) {
+          return true; // Include all recurring tasks
+        } else {
+          return status == 'active' || status == 'scheduled';
+        }
+      }).cast<Map<String, dynamic>>().toList();
 
       // Get collaborative tasks where user is an accepted participant
       final participantsQuery = await _supabase
@@ -311,17 +323,26 @@ class TaskService {
       
       List<Map<String, dynamic>> collaborativeTasks = [];
       if (participantTaskIds.isNotEmpty) {
-        collaborativeTasks = List<Map<String, dynamic>>.from(
-          await _supabase
-              .from('tasks')
-              .select()
-              .inFilter('id', participantTaskIds)
-              .eq('is_collaborative', true)
-              .inFilter('status', ['active', 'scheduled'])
-              .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})')
-              .order('due_time', ascending: true)
-              .order('due_date', ascending: true)
-        );
+        var collaborativeQuery = _supabase
+            .from('tasks')
+            .select()
+            .inFilter('id', participantTaskIds)
+            .eq('is_collaborative', true)
+            .or('due_date.is.null,and(due_date.gte.${startOfDay.toIso8601String()},due_date.lt.${endOfDay.toIso8601String()})');
+        
+        final collaborativeTasksRaw = await collaborativeQuery.order('due_time', ascending: true).order('due_date', ascending: true);
+        
+        // Filter: include non-recurring tasks with active/scheduled status, or recurring tasks
+        collaborativeTasks = (collaborativeTasksRaw as List<dynamic>).where((task) {
+          final taskMap = task as Map<String, dynamic>;
+          final isRecurring = taskMap['is_recurring'] == true;
+          final status = taskMap['status'] as String?;
+          if (isRecurring) {
+            return true; // Include all recurring tasks
+          } else {
+            return status == 'active' || status == 'scheduled';
+          }
+        }).cast<Map<String, dynamic>>().toList();
       }
       
       // Combine and deduplicate
@@ -333,7 +354,61 @@ class TaskService {
         allTasks[task['id'] as String] = task;
       }
       
+      // Reset recurring tasks that have passed their next occurrence
       final result = allTasks.values.toList();
+      for (final task in result) {
+        if (task['is_recurring'] == true && task['status'] == 'completed') {
+          final nextOccurrenceStr = task['next_occurrence'] as String?;
+          if (nextOccurrenceStr != null) {
+            try {
+              final nextOccurrence = DateTime.parse(nextOccurrenceStr);
+              final nextOccurrenceDate = DateTime(nextOccurrence.year, nextOccurrence.month, nextOccurrence.day);
+              
+              // If next occurrence has arrived (today or in the past), reset the task
+              if (nextOccurrenceDate.isBefore(startOfDay) || nextOccurrenceDate.isAtSameMomentAs(startOfDay)) {
+                final resetData = await _resetRecurringTask(task['id'] as String, task);
+                if (resetData != null) {
+                  // Update the task in the result list
+                  task['status'] = 'active';
+                  task['due_date'] = resetData['due_date'] as String;
+                  if (resetData['next_occurrence'] != null && resetData['next_occurrence'].toString().isNotEmpty) {
+                    task['next_occurrence'] = resetData['next_occurrence'] as String;
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('Error parsing next_occurrence for task ${task['id']}: $e');
+            }
+          }
+        }
+      }
+      
+      // For recurring tasks, check if they're actually completed for today
+      // Get all completion records for today
+      final todayCompletions = await _supabase
+          .from('task_completions')
+          .select('task_id')
+          .eq('user_id', _userId!)
+          .gte('completed_at', startOfDay.toIso8601String())
+          .lt('completed_at', endOfDay.toIso8601String());
+      
+      final completedTaskIds = (todayCompletions as List)
+          .map((c) => c['task_id'] as String)
+          .toSet();
+      
+      // Update completion status for recurring tasks based on today's completions
+      for (final task in result) {
+        if (task['is_recurring'] == true) {
+          final taskId = task['id'] as String;
+          // For recurring tasks, completion status is based on today's completion, not task status
+          if (completedTaskIds.contains(taskId)) {
+            task['status'] = 'completed';
+          } else {
+            task['status'] = 'active';
+          }
+        }
+      }
+      
       // Sort by due_time and due_date
       result.sort((a, b) {
         final aTime = a['due_time'] as String?;
