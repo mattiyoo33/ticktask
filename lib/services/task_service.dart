@@ -1148,6 +1148,8 @@ class TaskService {
       final xpGained = completion['xp_gained'] as int? ?? 0;
 
       // Delete the completion record
+      // NOTE: The database trigger 'trigger_task_completion_deleted' will automatically
+      // recalculate the streak when this deletion occurs
       await _supabase
           .from('task_completions')
           .delete()
@@ -1155,7 +1157,8 @@ class TaskService {
           .eq('user_id', _userId!);
 
       // Verify deletion was successful by checking if record still exists
-      await Future.delayed(const Duration(milliseconds: 100)); // Small delay for database consistency
+      // Small delay to allow database trigger to process the deletion and update streaks
+      await Future.delayed(const Duration(milliseconds: 300)); // Increased delay for trigger processing
       final verifyCompletion = await getTodayCompletion(taskId);
       if (verifyCompletion != null) {
         debugPrint('⚠️ Warning: Completion record still exists after deletion attempt');
