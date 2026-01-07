@@ -6,6 +6,7 @@ import '../services/public_task_service.dart';
 import '../services/plan_service.dart';
 import '../services/achievement_service.dart';
 import '../services/tutorial_service.dart';
+import '../services/notification_permission_service.dart';
 import 'auth_provider.dart';
 
 // Task Service Provider
@@ -41,6 +42,11 @@ final achievementServiceProvider = Provider<AchievementService>((ref) {
 // Tutorial Service Provider
 final tutorialServiceProvider = Provider<TutorialService>((ref) {
   return TutorialService();
+});
+
+// Notification Permission Service Provider
+final notificationPermissionServiceProvider = Provider<NotificationPermissionService>((ref) {
+  return NotificationPermissionService();
 });
 
 // Today's Tasks Provider - watches auth state to auto-invalidate on user change

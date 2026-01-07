@@ -12,7 +12,145 @@ class NotificationSettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends ConsumerState<NotificationSettingsScreen> {
+class _NotificationSettingsScreenState extends ConsumerState<NotificationSettingsScreen> with WidgetsBindingObserver {
+  bool _isPermissionGranted = false;
+  bool _isPermissionPermanentlyDenied = false;
+  bool _isCheckingPermission = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermissionStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When app comes back to foreground, check permission status again
+    // (user might have changed it in settings)
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionStatus();
+    }
+  }
+
+  Future<void> _checkPermissionStatus() async {
+    setState(() => _isCheckingPermission = true);
+    try {
+      final permissionService = ref.read(notificationPermissionServiceProvider);
+      final isGranted = await permissionService.isPermissionGranted();
+      final isPermanentlyDenied = await permissionService.isPermissionPermanentlyDenied();
+      
+      setState(() {
+        _isPermissionGranted = isGranted;
+        _isPermissionPermanentlyDenied = isPermanentlyDenied;
+        _isCheckingPermission = false;
+      });
+    } catch (e) {
+      setState(() => _isCheckingPermission = false);
+      debugPrint('Error checking permission status: $e');
+    }
+  }
+
+  Future<void> _handleNotificationToggle(bool value) async {
+    HapticFeedback.lightImpact();
+    
+    if (value) {
+      // User wants to enable notifications - request permission
+      try {
+        final permissionService = ref.read(notificationPermissionServiceProvider);
+        
+        // Check current status first
+        final currentStatus = await permissionService.isPermissionGranted();
+        debugPrint('Current permission status before request: $currentStatus');
+        
+        final granted = await permissionService.requestPermission();
+        debugPrint('Permission request result: $granted');
+        
+        if (granted) {
+          // Permission granted - enable notifications
+          setState(() {
+            _isPermissionGranted = true;
+            _isPermissionPermanentlyDenied = false;
+          });
+          ref.read(notificationSettingsProvider.notifier).setNotificationsEnabled(true);
+          _showSuccessMessage('Notifications enabled');
+        } else {
+          // Permission denied - check if permanently denied
+          final isPermanentlyDenied = await permissionService.isPermissionPermanentlyDenied();
+          setState(() {
+            _isPermissionGranted = false;
+            _isPermissionPermanentlyDenied = isPermanentlyDenied;
+          });
+          
+          if (isPermanentlyDenied) {
+            _showPermissionDeniedDialog();
+          } else {
+            _showErrorMessage('Notification permission is required to enable notifications. Please check your device settings.');
+          }
+        }
+      } catch (e, stackTrace) {
+        debugPrint('Error handling notification toggle: $e');
+        debugPrint('Stack trace: $stackTrace');
+        _showErrorMessage('Failed to request notification permission. Please try again or check device settings.');
+      }
+    } else {
+      // User wants to disable notifications
+      ref.read(notificationSettingsProvider.notifier).setNotificationsEnabled(false);
+    }
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permission Required'),
+        content: const Text(
+          'Notifications are permanently disabled. Please enable them in your device settings to receive notifications.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final permissionService = ref.read(notificationPermissionServiceProvider);
+              await permissionService.openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -70,11 +208,8 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
                     ),
                   ),
                   Switch(
-                    value: settings.notificationsEnabled,
-                    onChanged: (value) {
-                      HapticFeedback.lightImpact();
-                      ref.read(notificationSettingsProvider.notifier).setNotificationsEnabled(value);
-                    },
+                    value: settings.notificationsEnabled && _isPermissionGranted,
+                    onChanged: _isCheckingPermission ? null : _handleNotificationToggle,
                   ),
                 ],
               ),
@@ -82,8 +217,78 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
 
             SizedBox(height: 3.h),
 
+            // Show permission status if not granted
+            if (!_isPermissionGranted && !_isCheckingPermission) ...[
+              Container(
+                padding: EdgeInsets.all(4.w),
+                decoration: BoxDecoration(
+                  color: _isPermissionPermanentlyDenied 
+                      ? Colors.orange.withValues(alpha: 0.1)
+                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _isPermissionPermanentlyDenied 
+                        ? Colors.orange.withValues(alpha: 0.3)
+                        : colorScheme.outline.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isPermissionPermanentlyDenied 
+                          ? Icons.warning_amber_rounded
+                          : Icons.info_outline,
+                      color: _isPermissionPermanentlyDenied 
+                          ? Colors.orange
+                          : colorScheme.onSurfaceVariant,
+                      size: 20,
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isPermissionPermanentlyDenied
+                                ? 'Permission Required'
+                                : 'Enable Notifications',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _isPermissionPermanentlyDenied 
+                                  ? Colors.orange.shade800
+                                  : colorScheme.onSurface,
+                            ),
+                          ),
+                          SizedBox(height: 0.5.h),
+                          Text(
+                            _isPermissionPermanentlyDenied
+                                ? 'Notifications are disabled in system settings. Tap "Open Settings" to enable them.'
+                                : 'Tap the toggle above to enable notifications.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isPermissionPermanentlyDenied) ...[
+                      SizedBox(width: 2.w),
+                      TextButton(
+                        onPressed: () async {
+                          final permissionService = ref.read(notificationPermissionServiceProvider);
+                          await permissionService.openAppSettings();
+                        },
+                        child: const Text('Open Settings'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(height: 3.h),
+            ],
+
             // Notification categories
-            if (settings.notificationsEnabled) ...[
+            if (settings.notificationsEnabled && _isPermissionGranted) ...[
               Text(
                 'Notification Types',
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -237,6 +442,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     );
   }
 }
+
 
 
 
