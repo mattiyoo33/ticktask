@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
+import '../../services/onboarding_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -51,16 +52,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     if (!mounted) return;
 
-    // Check if user is authenticated
-    final isAuthenticated = ref.read(isAuthenticatedProvider);
+    // TEMPORARY: Always show onboarding for testing
+    // TODO: Remove this and uncomment the check below when done testing
+    Navigator.pushReplacementNamed(context, AppRoutes.onboardingWelcome);
+    return;
 
-    if (isAuthenticated) {
-      // User is logged in, go to dashboard
-      Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
-    } else {
-      // User is not logged in, go to login
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
-    }
+    // Check if onboarding has been completed
+    // final onboardingService = OnboardingService();
+    // final hasCompletedOnboarding = await onboardingService.hasCompletedOnboarding();
+
+    // if (!hasCompletedOnboarding) {
+    //   // Show onboarding flow for first-time users
+    //   Navigator.pushReplacementNamed(context, AppRoutes.onboardingWelcome);
+    //   return;
+    // }
+
+    // // Check if user is authenticated
+    // final isAuthenticated = ref.read(isAuthenticatedProvider);
+
+    // if (isAuthenticated) {
+    //   // User is logged in, go to dashboard
+    //   Navigator.pushReplacementNamed(context, AppRoutes.homeDashboard);
+    // } else {
+    //   // User is not logged in, go to login
+    //   Navigator.pushReplacementNamed(context, AppRoutes.login);
+    // }
   }
 
   @override

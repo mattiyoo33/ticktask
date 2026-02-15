@@ -18,6 +18,8 @@ import '../presentation/more_screen/more_screen.dart';
 import '../presentation/achievements_screen/achievements_screen.dart';
 import '../presentation/tutorial_screen/tutorial_screen.dart';
 import '../presentation/notification_settings_screen/notification_settings_screen.dart';
+import '../presentation/onboarding_screen/onboarding_flow_screen.dart';
+import '../presentation/onboarding_screen/welcome_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -37,9 +39,11 @@ class AppRoutes {
   static const String planCreation = '/plan-creation-screen';
   static const String planDetail = '/plan-detail-screen';
   static const String more = '/more-screen';
-  static const String achievements = '/achievements-screen';
-  static const String tutorial = '/tutorial-screen';
-  static const String notificationSettings = '/notification-settings-screen';
+    static const String achievements = '/achievements-screen';
+    static const String tutorial = '/tutorial-screen';
+    static const String notificationSettings = '/notification-settings-screen';
+    static const String onboarding = '/onboarding';
+    static const String onboardingWelcome = '/onboarding-welcome';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -66,5 +70,7 @@ class AppRoutes {
       return TutorialScreen(isFirstTime: isFirstTime);
     },
     notificationSettings: (context) => const NotificationSettingsScreen(),
+    onboarding: (context) => const OnboardingFlowScreen(),
+    onboardingWelcome: (context) => const WelcomeScreen(),
   };
 }
