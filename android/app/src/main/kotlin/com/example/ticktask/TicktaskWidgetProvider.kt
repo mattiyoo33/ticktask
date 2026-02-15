@@ -22,6 +22,9 @@ class TicktaskWidgetProvider : AppWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.ticktask_widget)
             views.setTextViewText(R.id.widget_text, text)
+            views.setImageViewResource(R.id.widget_logo, R.drawable.ticktask_logo)
+            // Logo as subtle background (~20% opacity) so message stays readable on top
+            views.setFloat(R.id.widget_logo, "setAlpha", 0.2f)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }
