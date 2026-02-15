@@ -35,6 +35,13 @@ void main() async {
     // App will still run, but auth features won't work
   }
 
+  // Update home widget with test text (so widget shows "test-widgets")
+  try {
+    await WidgetService.initWidget();
+  } catch (e) {
+    debugPrint('Widget init skipped: $e');
+  }
+
   // 🚨 CRITICAL: Device orientation lock - DO NOT REMOVE
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 

@@ -17,6 +17,9 @@ dependencies:
   shared_preferences: ^2.2.2 # Required for local data storage
   web: ^1.1.1
   
+  # Home / lock screen widgets
+  home_widget: ^0.9.0
+
   # Feature dependencies - safe to modify
   cached_network_image: ^3.3.1
   connectivity_plus: ^6.1.4

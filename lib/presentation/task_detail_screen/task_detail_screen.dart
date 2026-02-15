@@ -19,6 +19,7 @@ import './widgets/celebration_overlay_widget.dart';
 import './widgets/comments_section_widget.dart';
 import './widgets/participants_widget.dart';
 import './widgets/select_friends_modal_widget.dart';
+import './widgets/streak_banner_widget.dart';
 import './widgets/streak_progress_widget.dart';
 import './widgets/task_header_widget.dart';
 import './widgets/task_info_widget.dart';
@@ -33,6 +34,9 @@ class TaskDetailScreen extends ConsumerStatefulWidget {
 class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   bool _isLoading = false;
   bool _showCelebration = false;
+  bool _showStreakBanner = false;
+  List<Map<String, dynamic>> _streakBannerWeeklyCounts = [];
+  int _streakBannerCurrentStreak = 0;
   int _xpGained = 0;
   bool _isInitialLoading = true;
   
@@ -1002,6 +1006,26 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     setState(() {
       _showCelebration = false;
     });
+    // Show weekly streak banner at top for 5 seconds so user sees they're on a streak
+    _showStreakBannerAfterCompletion();
+  }
+
+  Future<void> _showStreakBannerAfterCompletion() async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      final weeklyCounts = await taskService.getWeeklyCompletionCounts();
+      final streakData = await taskService.getOverallUserStreak();
+      final currentStreak = streakData['current_streak'] as int? ?? 0;
+
+      if (!mounted) return;
+      setState(() {
+        _streakBannerWeeklyCounts = weeklyCounts;
+        _streakBannerCurrentStreak = currentStreak;
+        _showStreakBanner = true;
+      });
+    } catch (e) {
+      debugPrint('Streak banner: failed to load data $e');
+    }
   }
 
   @override
@@ -1139,6 +1163,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             xpGained: _xpGained,
             onAnimationComplete: _onCelebrationComplete,
           ),
+          // Streak banner (shows for 5s after congrats)
+          if (_showStreakBanner)
+            StreakBannerWidget(
+              weeklyCounts: _streakBannerWeeklyCounts,
+              currentStreak: _streakBannerCurrentStreak,
+              onDismiss: () {
+                if (mounted) {
+                  setState(() => _showStreakBanner = false);
+                }
+              },
+            ),
         ],
       ),
     );

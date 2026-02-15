@@ -11,6 +11,7 @@ import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../task_detail_screen/widgets/celebration_overlay_widget.dart';
+import '../task_detail_screen/widgets/streak_banner_widget.dart';
 import 'widgets/plan_header_widget.dart';
 import 'widgets/plan_task_item_widget.dart';
 import 'widgets/public_plan_leaderboard_widget.dart';
@@ -25,6 +26,9 @@ class PlanDetailScreen extends ConsumerStatefulWidget {
 class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   bool _isRefreshing = false;
   bool _showCelebration = false;
+  bool _showStreakBanner = false;
+  List<Map<String, dynamic>> _streakBannerWeeklyCounts = [];
+  int _streakBannerCurrentStreak = 0;
   int _xpGained = 0;
   bool _hasJoined = false;
   bool _isOwner = false;
@@ -245,6 +249,25 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     setState(() {
       _showCelebration = false;
     });
+    _showStreakBannerAfterCompletion();
+  }
+
+  Future<void> _showStreakBannerAfterCompletion() async {
+    try {
+      final taskService = ref.read(taskServiceProvider);
+      final weeklyCounts = await taskService.getWeeklyCompletionCounts();
+      final streakData = await taskService.getOverallUserStreak();
+      final currentStreak = streakData['current_streak'] as int? ?? 0;
+
+      if (!mounted) return;
+      setState(() {
+        _streakBannerWeeklyCounts = weeklyCounts;
+        _streakBannerCurrentStreak = currentStreak;
+        _showStreakBanner = true;
+      });
+    } catch (e) {
+      debugPrint('Streak banner: failed to load data $e');
+    }
   }
 
   @override
@@ -566,6 +589,17 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
         xpGained: _xpGained,
         onAnimationComplete: _onCelebrationComplete,
       ),
+      // Streak banner (shows for 5s after congrats)
+      if (_showStreakBanner)
+        StreakBannerWidget(
+          weeklyCounts: _streakBannerWeeklyCounts,
+          currentStreak: _streakBannerCurrentStreak,
+          onDismiss: () {
+            if (mounted) {
+              setState(() => _showStreakBanner = false);
+            }
+          },
+        ),
     ],
     );
   }

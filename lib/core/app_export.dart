@@ -17,6 +17,7 @@ export '../services/achievement_service.dart';
 export '../services/tutorial_service.dart';
 export '../services/notification_permission_service.dart';
 export '../services/onboarding_service.dart';
+export '../services/widget_service.dart';
 export '../providers/auth_provider.dart';
 export '../providers/service_providers.dart';
 export '../providers/theme_provider.dart';
