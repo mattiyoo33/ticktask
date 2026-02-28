@@ -159,7 +159,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
       builder: (context) => AlertDialog(
         title: Text('Delete Plan'),
         content: Text(
-          'Are you sure you want to delete this plan? Tasks in this plan will not be deleted, but they will no longer be grouped together.',
+          'Are you sure you want to delete this plan? All tasks in this plan will be deleted as well.',
         ),
         actions: [
           TextButton(

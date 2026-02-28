@@ -826,8 +826,13 @@ class TaskService {
           'xp_gained': -totalXpToRevert, // Negative to show XP was removed
         });
       }
-      
-      // Delete the task (completion records should be cascade deleted by foreign key)
+
+      // Delete dependent rows first so completed/collaborative tasks delete without FK errors
+      await _supabase.from('task_comments').delete().eq('task_id', taskId);
+      await _supabase.from('task_participants').delete().eq('task_id', taskId);
+      await _supabase.from('task_completions').delete().eq('task_id', taskId);
+
+      // Delete the task
       await _supabase
           .from('tasks')
           .delete()

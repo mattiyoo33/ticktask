@@ -350,15 +350,33 @@ class PlanService {
     }
   }
 
-  // Delete a plan (tasks will have plan_id set to NULL due to ON DELETE SET NULL)
+  // Delete a plan and all its tasks. Removes dependent rows first so completed tasks delete cleanly.
   Future<void> deletePlan(String planId) async {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
-      // Delete all tasks that belong to this plan (and their related data via cascades)
+      // 1. Get all task IDs in this plan (must delete dependents before tasks)
+      final tasksResponse = await _supabase
+          .from('tasks')
+          .select('id')
+          .eq('plan_id', planId);
+      final taskList = tasksResponse as List;
+      if (taskList.isNotEmpty) {
+        final taskIds = taskList.map((t) => t['id'] as String).toList();
+
+        // 2. Delete child rows that reference these tasks (avoids FK violation on delete)
+        for (final taskId in taskIds) {
+          await _supabase.from('task_comments').delete().eq('task_id', taskId);
+          await _supabase.from('task_participants').delete().eq('task_id', taskId);
+          await _supabase.from('activities').delete().eq('task_id', taskId);
+          await _supabase.from('task_completions').delete().eq('task_id', taskId);
+        }
+      }
+
+      // 4. Delete all tasks that belong to this plan
       await _supabase.from('tasks').delete().eq('plan_id', planId);
 
-      // Delete the plan itself (owned by current user)
+      // 5. Delete the plan itself (owned by current user)
       await _supabase
           .from('plans')
           .delete()
