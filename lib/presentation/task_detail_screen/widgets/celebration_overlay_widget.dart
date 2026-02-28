@@ -9,12 +9,15 @@ import '../../../widgets/custom_icon_widget.dart';
 class CelebrationOverlayWidget extends StatefulWidget {
   final bool isVisible;
   final int xpGained;
+  /// When true, shows "You earned the maximum XP you can get today!" instead of normal task-completed message.
+  final bool isMaxXpReached;
   final VoidCallback? onAnimationComplete;
 
   const CelebrationOverlayWidget({
     super.key,
     required this.isVisible,
     required this.xpGained,
+    this.isMaxXpReached = false,
     this.onAnimationComplete,
   });
 
@@ -169,7 +172,9 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
                               ),
                               SizedBox(height: 1.h),
                               Text(
-                                'Task Completed!',
+                                widget.isMaxXpReached
+                                    ? 'You did it! 🎉'
+                                    : 'Task Completed!',
                                 style: theme.textTheme.headlineSmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
@@ -177,16 +182,29 @@ class _CelebrationOverlayWidgetState extends State<CelebrationOverlayWidget>
                               ),
                               SizedBox(height: 0.5.h),
                               Text(
-                                'Congrats!',
+                                widget.isMaxXpReached
+                                    ? 'You earned the maximum XP you can get today!'
+                                    : 'Congrats!',
+                                textAlign: TextAlign.center,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              if (widget.xpGained > 0) ...[
+                              if (widget.xpGained > 0 && !widget.isMaxXpReached) ...[
                                 SizedBox(height: 0.5.h),
                                 Text(
                                   '+${widget.xpGained} XP',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                              if (widget.isMaxXpReached && widget.xpGained > 0) ...[
+                                SizedBox(height: 0.5.h),
+                                Text(
+                                  '+${widget.xpGained} XP (daily max reached)',
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,

@@ -2,11 +2,14 @@
 /// 
 /// Displays a single task item within a plan, showing task title, due time, status,
 /// and completion checkbox. Tasks can be tapped to view details or marked as complete.
+/// Complete button is disabled for 5 minutes after task creation (countdown shown).
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
 
-class PlanTaskItemWidget extends StatelessWidget {
+class PlanTaskItemWidget extends StatefulWidget {
   final Map<String, dynamic> task;
   final int index;
   final VoidCallback? onTap;
@@ -27,6 +30,38 @@ class PlanTaskItemWidget extends StatelessWidget {
     this.isLocked = false,
     this.isNextUp = false,
   });
+
+  @override
+  State<PlanTaskItemWidget> createState() => _PlanTaskItemWidgetState();
+}
+
+class _PlanTaskItemWidgetState extends State<PlanTaskItemWidget> {
+  int _cooldownRemainingSeconds = 0;
+  Timer? _cooldownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(
+      widget.task['created_at'] as String?,
+    );
+    if (_cooldownRemainingSeconds > 0) {
+      _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        final r = TaskService.getRemainingCooldownSeconds(
+          widget.task['created_at'] as String?,
+        );
+        setState(() => _cooldownRemainingSeconds = r);
+        if (r <= 0) _cooldownTimer?.cancel();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    super.dispose();
+  }
 
   String _formatDueTime(String? dueTime) {
     if (dueTime == null || dueTime.isEmpty) return '';
@@ -49,11 +84,12 @@ class PlanTaskItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final title = task['title'] as String? ?? 'Untitled Task';
-    final status = task['status'] as String? ?? 'active';
-    final dueTime = task['due_time'] as String?;
+    final title = widget.task['title'] as String? ?? 'Untitled Task';
+    final status = widget.task['status'] as String? ?? 'active';
+    final dueTime = widget.task['due_time'] as String?;
     final isCompleted = status == 'completed';
     final statusColor = _getStatusColor(status, colorScheme);
+    final inCooldown = _cooldownRemainingSeconds > 0 && widget.onComplete != null;
 
     return Card(
       margin: EdgeInsets.only(bottom: 1.5.h),
@@ -68,7 +104,7 @@ class PlanTaskItemWidget extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: isLocked ? onLockedTap : onTap,
+        onTap: widget.isLocked ? widget.onLockedTap : widget.onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: EdgeInsets.all(3.w),
@@ -88,7 +124,7 @@ class PlanTaskItemWidget extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    '${index + 1}',
+                    '${widget.index + 1}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: statusColor,
                       fontWeight: FontWeight.w600,
@@ -137,7 +173,7 @@ class PlanTaskItemWidget extends StatelessWidget {
                 ),
               ),
               // Status Indicator / Action Buttons
-              if (isLocked)
+              if (widget.isLocked)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
                   decoration: BoxDecoration(
@@ -148,13 +184,13 @@ class PlanTaskItemWidget extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CustomIconWidget(
-                        iconName: isNextUp ? 'arrow_forward' : 'lock',
+                        iconName: widget.isNextUp ? 'arrow_forward' : 'lock',
                         color: colorScheme.onSurfaceVariant,
                         size: 16,
                       ),
                       SizedBox(width: 1.w),
                       Text(
-                        isNextUp ? 'Next up' : 'Locked',
+                        widget.isNextUp ? 'Next up' : 'Locked',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
@@ -163,9 +199,9 @@ class PlanTaskItemWidget extends StatelessWidget {
                     ],
                   ),
                 )
-              else if (isCompleted && onRevert != null)
+              else if (isCompleted && widget.onRevert != null)
                 IconButton(
-                  onPressed: onRevert,
+                  onPressed: widget.onRevert,
                   icon: Icon(
                     Icons.undo,
                     color: colorScheme.error,
@@ -186,9 +222,27 @@ class PlanTaskItemWidget extends StatelessWidget {
                     size: 16,
                   ),
                 )
-              else if (onComplete != null)
+              else if (inCooldown)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.8.h),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${(_cooldownRemainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_cooldownRemainingSeconds % 60).toString().padLeft(2, '0')}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else if (widget.onComplete != null)
                 IconButton(
-                  onPressed: onComplete,
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    widget.onComplete?.call();
+                  },
                   icon: Icon(
                     Icons.check_circle_outline,
                     color: colorScheme.primary,

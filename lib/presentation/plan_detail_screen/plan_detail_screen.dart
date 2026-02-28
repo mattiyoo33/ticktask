@@ -30,6 +30,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   List<Map<String, dynamic>> _streakBannerWeeklyCounts = [];
   int _streakBannerCurrentStreak = 0;
   int _xpGained = 0;
+  bool _isMaxXpCelebration = false;
   bool _hasJoined = false;
   bool _isOwner = false;
   bool _isLoadingJoinStatus = true;
@@ -172,11 +173,25 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       if (mounted) {
         final xpAwarded = result['xp_awarded'] as bool? ?? false;
         final xpGained = result['xp_gained'] as int? ?? 0;
+        final hitDailyCap = result['hit_daily_cap'] as bool? ?? false;
+        final atCapBefore = result['at_cap_before'] as bool? ?? false;
         final streakBonus = streakData?['has_streak_bonus'] == true && xpAwarded ? 25 : 0;
-        
+
+        if (atCapBefore) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Daily XP limit (${TaskService.dailyXpCap}) reached. Try again tomorrow!',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+
         setState(() {
           _xpGained = xpGained + streakBonus;
-          _showCelebration = true; // Show celebration for all completions
+          _isMaxXpCelebration = hitDailyCap;
+          _showCelebration = true;
         });
       }
     } catch (e) {
@@ -248,6 +263,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   void _onCelebrationComplete() {
     setState(() {
       _showCelebration = false;
+      _isMaxXpCelebration = false;
     });
     _showStreakBannerAfterCompletion();
   }
@@ -587,6 +603,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       CelebrationOverlayWidget(
         isVisible: _showCelebration,
         xpGained: _xpGained,
+        isMaxXpReached: _isMaxXpCelebration,
         onAnimationComplete: _onCelebrationComplete,
       ),
       // Streak banner (shows for 5s after congrats)

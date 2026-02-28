@@ -12,8 +12,52 @@ import 'supabase_service.dart';
 class TaskService {
   final _supabase = SupabaseService.client;
 
+  /// Maximum XP a user can earn per day (cap to prevent farming).
+  static const int dailyXpCap = 200;
+
+  /// Minutes a user must wait after creating a task before they can complete it.
+  static const int completeCooldownMinutes = 5;
+
+  /// Returns remaining cooldown seconds (0 if task can be completed now).
+  static int getRemainingCooldownSeconds(String? createdAtIso) {
+    if (createdAtIso == null || createdAtIso.isEmpty) return 0;
+    try {
+      final createdAt = DateTime.parse(createdAtIso);
+      final elapsed = DateTime.now().difference(createdAt);
+      final cooldown = Duration(minutes: completeCooldownMinutes);
+      if (elapsed >= cooldown) return 0;
+      return (cooldown - elapsed).inSeconds;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   // Get current user ID
   String? get _userId => _supabase.auth.currentUser?.id;
+
+  /// Returns total XP earned by the current user today (from task_completions).
+  Future<int> getTodayXpEarned() async {
+    if (_userId == null) return 0;
+    try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      final rows = await _supabase
+          .from('task_completions')
+          .select('xp_gained')
+          .eq('user_id', _userId!)
+          .gte('completed_at', startOfDay.toIso8601String())
+          .lt('completed_at', endOfDay.toIso8601String());
+      int total = 0;
+      for (final r in (rows as List)) {
+        total += (r['xp_gained'] as int? ?? 0);
+      }
+      return total;
+    } catch (e) {
+      debugPrint('getTodayXpEarned: $e');
+      return 0;
+    }
+  }
 
   // Get all tasks for current user (owned tasks + accepted collaborative tasks)
   Future<List<Map<String, dynamic>>> getTasks({
@@ -926,6 +970,17 @@ class TaskService {
         throw Exception('You have already completed this task today${completedAt != null ? ' at ${DateTime.parse(completedAt).toLocal().toString().split('.')[0]}' : ''}. Only one completion per day per task is allowed.');
       }
 
+      // Enforce 5-minute cooldown after task creation before allowing completion
+      final createdAtStr = task['created_at'] as String?;
+      if (createdAtStr != null && createdAtStr.isNotEmpty) {
+        final remaining = getRemainingCooldownSeconds(createdAtStr);
+        if (remaining > 0) {
+          final m = remaining ~/ 60;
+          final s = remaining % 60;
+          throw Exception('Wait ${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')} before completing this task (5 min after creation).');
+        }
+      }
+
       final xpReward = task['xp_reward'] as int? ?? 0;
       final dueDateStr = task['due_date'] as String?;
       final dueTimeStr = task['due_time'] as String?;
@@ -958,6 +1013,21 @@ class TaskService {
         actualXpGained = xpReward;
       }
 
+      // Daily XP cap: user can earn at most [dailyXpCap] per day
+      int xpEarnedToday = await getTodayXpEarned();
+      bool atCapBefore = false;
+      if (xpAwarded && actualXpGained > 0) {
+        final remaining = TaskService.dailyXpCap - xpEarnedToday;
+        if (remaining <= 0) {
+          actualXpGained = 0;
+          atCapBefore = true;
+        } else {
+          actualXpGained = actualXpGained.clamp(0, remaining);
+        }
+      }
+      final totalAfter = xpEarnedToday + actualXpGained;
+      final hitDailyCap = totalAfter >= TaskService.dailyXpCap && actualXpGained > 0;
+
       // Create completion record
       // Note: The database trigger will also check for duplicates, but we check here first
       // to provide a better error message
@@ -988,11 +1058,13 @@ class TaskService {
         'xp_gained': actualXpGained,
       });
 
-      // Add xp_awarded flag to return value
+      // Add xp_awarded and daily cap flags to return value
       final result = Map<String, dynamic>.from(completion);
       result['xp_awarded'] = xpAwarded;
       result['xp_should_have_been'] = xpReward;
-      
+      result['hit_daily_cap'] = hitDailyCap;
+      result['at_cap_before'] = atCapBefore;
+
       return result;
     } catch (e) {
       // Re-throw with more context if it's a PostgrestException about duplicate completion

@@ -7,6 +7,7 @@
 /// real-time comments from assigned participants, and participant management. It integrates with
 /// Supabase Realtime to provide live comment updates and displays celebration animations when
 /// tasks are completed on time with XP rewards.
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -38,6 +39,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   List<Map<String, dynamic>> _streakBannerWeeklyCounts = [];
   int _streakBannerCurrentStreak = 0;
   int _xpGained = 0;
+  bool _isMaxXpCelebration = false;
   bool _isInitialLoading = true;
   
   Map<String, dynamic>? _taskData;
@@ -50,6 +52,15 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   bool _isOwner = false; // Whether current user is the task owner
   bool _isParticipant = false; // Whether current user is a participant
   bool _userCompletedToday = false; // Whether current user completed the task today (for plan tasks)
+  int _cooldownRemainingSeconds = 0;
+  Timer? _cooldownTimer;
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    _commentsChannel?.unsubscribe();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -61,10 +72,18 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _commentsChannel?.unsubscribe();
-    super.dispose();
+  void _startCooldownTimerIfNeeded() {
+    _cooldownTimer?.cancel();
+    final createdAt = _taskData?['created_at'] as String?;
+    _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(createdAt);
+    if (_cooldownRemainingSeconds > 0 && _currentTaskStatus == TaskStatus.active) {
+      _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        final r = TaskService.getRemainingCooldownSeconds(_taskData?['created_at'] as String?);
+        setState(() => _cooldownRemainingSeconds = r);
+        if (r <= 0) _cooldownTimer?.cancel();
+      });
+    }
   }
 
   Future<void> _loadTaskData() async {
@@ -233,6 +252,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         _userCompletedToday = userCompletedToday;
         _isInitialLoading = false;
       });
+
+      _startCooldownTimerIfNeeded();
 
       // Set up real-time comments subscription
       _setupRealtimeComments();
@@ -677,8 +698,22 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       
       final xpAwarded = completionResult['xp_awarded'] as bool? ?? false;
       final xpGained = completionResult['xp_gained'] as int? ?? 0;
+      final hitDailyCap = completionResult['hit_daily_cap'] as bool? ?? false;
+      final atCapBefore = completionResult['at_cap_before'] as bool? ?? false;
       final streakBonus = _streakData?['has_streak_bonus'] == true && xpAwarded ? 25 : 0;
-      
+
+      // If already at daily XP cap, task still completes but no XP; show message
+      if (atCapBefore && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Daily XP limit (${TaskService.dailyXpCap}) reached. Try again tomorrow!',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
       // Refresh task data
       await _loadTaskData();
       
@@ -704,11 +739,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       setState(() {
         _isLoading = false;
         _xpGained = xpGained + streakBonus;
-        // Reset celebration flag before showing to avoid missed rebuilds
+        _isMaxXpCelebration = hitDailyCap;
         _showCelebration = false;
       });
 
-      // Trigger celebration after frame to ensure overlay paints (avoids missed builds)
+      // Trigger celebration after frame (skip if at cap with no XP and no hit-cap moment)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -1005,6 +1040,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   void _onCelebrationComplete() {
     setState(() {
       _showCelebration = false;
+      _isMaxXpCelebration = false;
     });
     // Show weekly streak banner at top for 5 seconds so user sees they're on a streak
     _showStreakBannerAfterCompletion();
@@ -1150,6 +1186,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   onMarkIncomplete: _handleMarkIncomplete,
                   onStartTask: _handleStartTask,
                   isLoading: _isLoading,
+                  cooldownRemainingSeconds: _cooldownRemainingSeconds,
                 ),
 
                 SizedBox(height: 4.h),
@@ -1161,6 +1198,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           CelebrationOverlayWidget(
             isVisible: _showCelebration,
             xpGained: _xpGained,
+            isMaxXpReached: _isMaxXpCelebration,
             onAnimationComplete: _onCelebrationComplete,
           ),
           // Streak banner (shows for 5s after congrats)

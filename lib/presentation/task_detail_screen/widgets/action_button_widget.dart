@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
-import '../../../widgets/custom_icon_widget.dart';
-
 enum TaskStatus { active, completed, scheduled }
 //TODO: Commit testaadsad
 // second commit test
@@ -16,6 +13,8 @@ class ActionButtonWidget extends StatelessWidget {
   final VoidCallback? onMarkIncomplete;
   final VoidCallback? onStartTask;
   final bool isLoading;
+  /// When > 0, button is disabled and shows countdown (e.g. 4:32).
+  final int cooldownRemainingSeconds;
 
   const ActionButtonWidget({
     super.key,
@@ -24,6 +23,7 @@ class ActionButtonWidget extends StatelessWidget {
     this.onMarkIncomplete,
     this.onStartTask,
     this.isLoading = false,
+    this.cooldownRemainingSeconds = 0,
   });
 
   @override
@@ -53,12 +53,16 @@ class ActionButtonWidget extends StatelessWidget {
         onPressed = onStartTask;
         break;
       case TaskStatus.active:
-      default:
-        buttonText = 'Mark Complete';
+        final inCooldown = cooldownRemainingSeconds > 0;
+        final m = cooldownRemainingSeconds ~/ 60;
+        final s = cooldownRemainingSeconds % 60;
+        buttonText = inCooldown
+            ? '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
+            : 'Mark Complete';
         buttonColor = colorScheme.primary;
         textColor = Colors.white;
         buttonIcon = Icons.check_circle;
-        onPressed = onMarkComplete;
+        onPressed = inCooldown ? null : onMarkComplete;
         break;
     }
 
@@ -96,11 +100,7 @@ class ActionButtonWidget extends StatelessWidget {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CustomIconWidget(
-                      iconName: buttonIcon.codePoint.toString(),
-                      color: textColor,
-                      size: 20,
-                    ),
+                    Icon(buttonIcon, color: textColor, size: 22),
                     SizedBox(width: 2.w),
                     Text(
                       buttonText,

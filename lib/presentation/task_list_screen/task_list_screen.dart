@@ -941,14 +941,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       int totalXpAwarded = 0;
       int tasksCompletedOnTime = 0;
       int tasksCompletedLate = 0;
+      bool hitDailyCapAny = false;
 
       for (final task in selectedTasks) {
         final taskId = task['id'].toString();
         final completionResult = await taskService.completeTask(taskId);
-        
+
         final xpAwarded = completionResult['xp_awarded'] as bool? ?? false;
         final xpGained = completionResult['xp_gained'] as int? ?? 0;
-        
+        if (completionResult['hit_daily_cap'] == true) hitDailyCapAny = true;
+
         totalXpAwarded += xpGained;
         if (xpAwarded) {
           tasksCompletedOnTime++;
@@ -979,10 +981,13 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
         message = "${selectedTasks.length} tasks completed late - no XP awarded";
       } else {
         message = "${selectedTasks.length} tasks completed! +$totalXpAwarded XP earned 🎉";
-    _confettiController.forward().then((_) {
-      _confettiController.reset();
-    });
-  }
+        _confettiController.forward().then((_) {
+          _confettiController.reset();
+        });
+      }
+      if (hitDailyCapAny) {
+        message += " You reached the daily XP limit (${TaskService.dailyXpCap})!";
+      }
 
       Fluttertoast.showToast(
         msg: message,
