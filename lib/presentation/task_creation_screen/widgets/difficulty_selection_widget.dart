@@ -35,7 +35,7 @@ class DifficultySelectionWidget extends StatelessWidget {
               child: _buildDifficultyCard(
                 context,
                 'Easy',
-                '10 XP',
+                '15 XP',
                 AppTheme.lightTheme.colorScheme.secondary,
                 CustomIconWidget(
                   iconName: 'star_outline',
@@ -49,7 +49,7 @@ class DifficultySelectionWidget extends StatelessWidget {
               child: _buildDifficultyCard(
                 context,
                 'Medium',
-                '20 XP',
+                '30 XP',
                 AppTheme.lightTheme.colorScheme.primary,
                 CustomIconWidget(
                   iconName: 'star_half',
@@ -63,7 +63,7 @@ class DifficultySelectionWidget extends StatelessWidget {
               child: _buildDifficultyCard(
                 context,
                 'Hard',
-                '30 XP',
+                '50 XP',
                 AppTheme.lightTheme.colorScheme.tertiary,
                 CustomIconWidget(
                   iconName: 'star',

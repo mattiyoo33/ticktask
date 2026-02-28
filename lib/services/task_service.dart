@@ -13,7 +13,7 @@ class TaskService {
   final _supabase = SupabaseService.client;
 
   /// Maximum XP a user can earn per day (cap to prevent farming).
-  static const int dailyXpCap = 200;
+  static const int dailyXpCap = 500;
 
   /// Minutes a user must wait after creating a task before they can complete it.
   static const int completeCooldownMinutes = 5;
@@ -1994,13 +1994,13 @@ class TaskService {
   int _calculateXpReward(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'easy':
-        return 10;
+        return 15;
       case 'medium':
-        return 20;
-      case 'hard':
         return 30;
+      case 'hard':
+        return 50;
       default:
-        return 20;
+        return 30;
     }
   }
 }
