@@ -164,6 +164,27 @@ class PlanService {
       final firstIncompleteIndex =
           tasksList.indexWhere((task) => (task['status'] as String? ?? 'active') != 'completed');
 
+      // For cooldown: first task uses created_at; later tasks use previous task's completion time
+      final taskIds = tasksList.map((t) => t['id'] as String).toList();
+      final latestCompletionByTaskId = <String, String>{};
+      if (taskIds.isNotEmpty && _userId != null) {
+        try {
+          final completions = await _supabase
+              .from('task_completions')
+              .select('task_id, completed_at')
+              .inFilter('task_id', taskIds)
+              .eq('user_id', _userId!)
+              .order('completed_at', ascending: false);
+          for (final row in completions as List) {
+            final tid = row['task_id'] as String?;
+            final at = row['completed_at'] as String?;
+            if (tid != null && at != null && !latestCompletionByTaskId.containsKey(tid)) {
+              latestCompletionByTaskId[tid] = at;
+            }
+          }
+        } catch (_) { /* keep map empty */ }
+      }
+
       tasksList = tasksList.asMap().entries.map((entry) {
         final idx = entry.key;
         final task = Map<String, dynamic>.from(entry.value);
@@ -174,6 +195,14 @@ class PlanService {
 
         task['is_next_up'] = isNextUp;
         task['is_unlocked'] = isUnlocked;
+        // Cooldown start: first task = created_at; later = previous task's completion time
+        if (idx == 0) {
+          task['effective_cooldown_start_iso'] = task['created_at'];
+        } else {
+          final prevTaskId = (tasksList[idx - 1]['id'] as String?);
+          final prevCompletedAt = prevTaskId != null ? latestCompletionByTaskId[prevTaskId] : null;
+          task['effective_cooldown_start_iso'] = prevCompletedAt ?? task['created_at'];
+        }
         return task;
       }).toList();
 

@@ -513,6 +513,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                         final isNextUp = taskWithUserStatus['is_next_up'] == true;
                         
                     return PlanTaskItemWidget(
+                          key: ValueKey(taskId),
                           task: taskWithUserStatus,
                       index: index,
                           isLocked: !isUnlocked,

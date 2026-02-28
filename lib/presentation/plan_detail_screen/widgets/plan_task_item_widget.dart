@@ -39,21 +39,41 @@ class _PlanTaskItemWidgetState extends State<PlanTaskItemWidget> {
   int _cooldownRemainingSeconds = 0;
   Timer? _cooldownTimer;
 
+  /// For plan tasks: use effective_cooldown_start_iso (starts when previous task completed); else created_at.
+  String? _cooldownStartIso() =>
+      widget.task['effective_cooldown_start_iso'] as String? ??
+      widget.task['created_at'] as String?;
+
   @override
   void initState() {
     super.initState();
-    _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(
-      widget.task['created_at'] as String?,
-    );
+    _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(_cooldownStartIso());
     if (_cooldownRemainingSeconds > 0) {
       _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
-        final r = TaskService.getRemainingCooldownSeconds(
-          widget.task['created_at'] as String?,
-        );
+        final r = TaskService.getRemainingCooldownSeconds(_cooldownStartIso());
         setState(() => _cooldownRemainingSeconds = r);
         if (r <= 0) _cooldownTimer?.cancel();
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(PlanTaskItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldStart = oldWidget.task['effective_cooldown_start_iso'] as String? ?? oldWidget.task['created_at'] as String?;
+    final newStart = _cooldownStartIso();
+    if (oldStart != newStart) {
+      _cooldownTimer?.cancel();
+      _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(newStart);
+      if (_cooldownRemainingSeconds > 0 && mounted) {
+        _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (!mounted) return;
+          final r = TaskService.getRemainingCooldownSeconds(_cooldownStartIso());
+          setState(() => _cooldownRemainingSeconds = r);
+          if (r <= 0) _cooldownTimer?.cancel();
+        });
+      }
     }
   }
 

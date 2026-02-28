@@ -72,14 +72,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     }
   }
 
+  /// For plan tasks: cooldown starts when previous task is completed; else from task creation.
+  String? _cooldownStartIso() =>
+      _taskData?['effective_cooldown_start_iso'] as String? ?? _taskData?['created_at'] as String?;
+
   void _startCooldownTimerIfNeeded() {
     _cooldownTimer?.cancel();
-    final createdAt = _taskData?['created_at'] as String?;
-    _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(createdAt);
+    _cooldownRemainingSeconds = TaskService.getRemainingCooldownSeconds(_cooldownStartIso());
     if (_cooldownRemainingSeconds > 0 && _currentTaskStatus == TaskStatus.active) {
       _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
-        final r = TaskService.getRemainingCooldownSeconds(_taskData?['created_at'] as String?);
+        final r = TaskService.getRemainingCooldownSeconds(_cooldownStartIso());
         setState(() => _cooldownRemainingSeconds = r);
         if (r <= 0) _cooldownTimer?.cancel();
       });
@@ -241,8 +244,15 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         }
       }
 
+      // Preserve plan cooldown from navigation args so button shows countdown and is disabled
+      Map<String, dynamic> taskDataToSet = task;
+      if (taskArg['effective_cooldown_start_iso'] != null) {
+        taskDataToSet = Map<String, dynamic>.from(task);
+        taskDataToSet['effective_cooldown_start_iso'] = taskArg['effective_cooldown_start_iso'];
+      }
+
       setState(() {
-        _taskData = task;
+        _taskData = taskDataToSet;
         _streakData = streak;
         _taskOwner = taskOwner;
         _isOwner = isOwner;

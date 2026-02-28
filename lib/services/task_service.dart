@@ -911,6 +911,37 @@ class TaskService {
     }
   }
 
+  /// For plan tasks: first task uses created_at; later tasks use previous task's completion time.
+  /// Returns the ISO timestamp to use for the 5-minute cooldown check.
+  Future<String?> _getPlanTaskCooldownStartIso(String planId, String taskId, String? taskCreatedAt) async {
+    try {
+      final ordered = await _supabase
+          .from('tasks')
+          .select('id')
+          .eq('plan_id', planId)
+          .order('task_order', ascending: true)
+          .order('due_time', ascending: true);
+      final list = List<Map<String, dynamic>>.from(ordered);
+      final index = list.indexWhere((t) => (t['id'] as String?) == taskId);
+      if (index <= 0) return taskCreatedAt;
+      final prevTaskId = list[index - 1]['id'] as String?;
+      if (prevTaskId == null) return taskCreatedAt;
+      final completion = await _supabase
+          .from('task_completions')
+          .select('completed_at')
+          .eq('task_id', prevTaskId)
+          .eq('user_id', _userId!)
+          .order('completed_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (completion == null) return taskCreatedAt;
+      final completedAt = completion['completed_at'] as String?;
+      return (completedAt != null && completedAt.isNotEmpty) ? completedAt : taskCreatedAt;
+    } catch (_) {
+      return taskCreatedAt;
+    }
+  }
+
   // Complete a task
   // Returns completion record with 'xp_awarded' boolean indicating if XP was granted
   Future<Map<String, dynamic>> completeTask(String taskId) async {
@@ -975,14 +1006,17 @@ class TaskService {
         throw Exception('You have already completed this task today${completedAt != null ? ' at ${DateTime.parse(completedAt).toLocal().toString().split('.')[0]}' : ''}. Only one completion per day per task is allowed.');
       }
 
-      // Enforce 5-minute cooldown after task creation before allowing completion
-      final createdAtStr = task['created_at'] as String?;
-      if (createdAtStr != null && createdAtStr.isNotEmpty) {
-        final remaining = getRemainingCooldownSeconds(createdAtStr);
+      // Enforce 5-minute cooldown: for plan tasks, next task's cooldown starts when previous is completed
+      String? cooldownStartIso = task['created_at'] as String?;
+      if (planId != null) {
+        cooldownStartIso = await _getPlanTaskCooldownStartIso(planId, taskId, cooldownStartIso);
+      }
+      if (cooldownStartIso != null && cooldownStartIso.isNotEmpty) {
+        final remaining = getRemainingCooldownSeconds(cooldownStartIso);
         if (remaining > 0) {
           final m = remaining ~/ 60;
           final s = remaining % 60;
-          throw Exception('Wait ${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')} before completing this task (5 min after creation).');
+          throw Exception('Wait ${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')} before completing this task (5 min cooldown).');
         }
       }
 
