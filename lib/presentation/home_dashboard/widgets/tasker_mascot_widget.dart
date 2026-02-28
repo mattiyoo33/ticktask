@@ -130,10 +130,13 @@ class _TaskerMascotWidgetState extends State<TaskerMascotWidget>
                     ),
                     child: ClipOval(
                       child: Padding(
-                        padding: EdgeInsets.all(2.w),
-                        child: Image.asset(
-                          'assets/images/tasker_mascot.png',
+                        padding: EdgeInsets.all(3.5.w),
+                        child: FittedBox(
                           fit: BoxFit.contain,
+                          child: Image.asset(
+                            'assets/images/tasker_mascot.png',
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),
