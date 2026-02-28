@@ -10,19 +10,22 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFFFF5E6), // Light peach/cream
-              const Color(0xFFFFE5CC), // Slightly darker peach
-            ],
-          ),
-        ),
+        decoration: isDark
+            ? BoxDecoration(color: theme.colorScheme.surface)
+            : const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFF5E6), // Light peach/cream
+                    Color(0xFFFFE5CC), // Slightly darker peach
+                  ],
+                ),
+              ),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 6.w),
@@ -44,7 +47,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: Icon(
                       Icons.self_improvement_outlined,
                       size: 70.sp,
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.7 : 0.3),
                     ),
                   ),
                   SizedBox(height: 3.h),
@@ -56,7 +59,7 @@ class WelcomeScreen extends StatelessWidget {
                       Icon(
                         Icons.emoji_events_outlined,
                         size: 18.sp,
-                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                        color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.9 : 0.5),
                       ),
                       SizedBox(width: 2.w),
                       Text(
@@ -70,7 +73,7 @@ class WelcomeScreen extends StatelessWidget {
                       Icon(
                         Icons.emoji_events_outlined,
                         size: 18.sp,
-                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                        color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.9 : 0.5),
                       ),
                     ],
                   ),

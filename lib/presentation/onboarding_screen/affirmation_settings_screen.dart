@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
-import '../../core/app_export.dart';
 
 class AffirmationSettingsScreen extends StatefulWidget {
   final Function({
@@ -63,19 +62,22 @@ class _AffirmationSettingsScreenState extends State<AffirmationSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFFFF5E6), // Light peach/cream
-              const Color(0xFFFFE5CC), // Slightly darker peach
-            ],
-          ),
-        ),
+        decoration: isDark
+            ? BoxDecoration(color: theme.colorScheme.surface)
+            : const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFF5E6),
+                    Color(0xFFFFE5CC),
+                  ],
+                ),
+              ),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 6.w),
@@ -105,11 +107,13 @@ class _AffirmationSettingsScreenState extends State<AffirmationSettingsScreen> {
                 Container(
                   padding: EdgeInsets.all(4.w),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: isDark
+                        ? theme.colorScheme.surfaceContainerHighest
+                        : Colors.white.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -181,7 +185,9 @@ class _AffirmationSettingsScreenState extends State<AffirmationSettingsScreen> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 2.w),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: isDark
+                            ? theme.colorScheme.surfaceContainerHighest
+                            : Colors.white.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -413,16 +419,19 @@ class _AnimatedTimeCardState extends State<_AnimatedTimeCard>
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
+          final isDark = theme.brightness == Brightness.dark;
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
+                color: isDark
+                    ? theme.colorScheme.surfaceContainerHighest
+                    : Colors.white.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -435,11 +444,13 @@ class _AnimatedTimeCardState extends State<_AnimatedTimeCard>
                     widget.label,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     widget.time,
                     style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

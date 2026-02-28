@@ -5,18 +5,76 @@ import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
 
-/// More section design colors (Figma-style: light pink background, white cards, accent icons).
-abstract class _MoreSectionColors {
-  static const Color background = Color(0xFFFDF7F8); // Very light pink/off-white
+/// Light-theme More section colors (Figma-style).
+abstract class _MoreSectionColorsLight {
+  static const Color background = Color(0xFFFDF7F8);
   static const Color cardBackground = Color(0xFFFFFFFF);
-  static const Color headingText = Color(0xFF2D2D2D); // Dark charcoal
-  static const Color subtitleText = Color(0xFF828282); // Medium grey
+  static const Color headingText = Color(0xFF2D2D2D);
+  static const Color subtitleText = Color(0xFF828282);
   static const Color chevron = Color(0xFFADADAD);
-  static const Color profileFriendsIcon = Color(0xFFEE8B8B); // Light reddish-pink
+  static const Color profileFriendsIcon = Color(0xFFEE8B8B);
   static const Color profileFriendsIconBg = Color(0xFFF8EBEB);
-  static const Color achievementsIcon = Color(0xFFEBA954); // Golden-yellow
+  static const Color achievementsIcon = Color(0xFFEBA954);
   static const Color achievementsIconBg = Color(0xFFF8EFE3);
-  static const Color settingsIcon = Color(0xFF828282); // Dark grey
+  static const Color settingsIcon = Color(0xFF828282);
+}
+
+/// Theme-aware palette for More section (light = Figma, dark = theme colors).
+class _MoreSectionPalette {
+  final Color background;
+  final Color cardBackground;
+  final Color headingText;
+  final Color subtitleText;
+  final Color chevron;
+  final Color profileFriendsIcon;
+  final Color profileFriendsIconBg;
+  final Color achievementsIcon;
+  final Color achievementsIconBg;
+  final Color settingsIcon;
+
+  const _MoreSectionPalette({
+    required this.background,
+    required this.cardBackground,
+    required this.headingText,
+    required this.subtitleText,
+    required this.chevron,
+    required this.profileFriendsIcon,
+    required this.profileFriendsIconBg,
+    required this.achievementsIcon,
+    required this.achievementsIconBg,
+    required this.settingsIcon,
+  });
+
+  factory _MoreSectionPalette.fromContext(BuildContext context) {
+    final theme = Theme.of(context);
+    if (theme.brightness == Brightness.dark) {
+      final c = theme.colorScheme;
+      return _MoreSectionPalette(
+        background: c.surface,
+        cardBackground: c.surfaceContainerHighest,
+        headingText: c.onSurface,
+        subtitleText: c.onSurfaceVariant,
+        chevron: c.onSurfaceVariant,
+        profileFriendsIcon: c.secondary,
+        profileFriendsIconBg: c.secondaryContainer,
+        achievementsIcon: c.tertiary,
+        achievementsIconBg: c.tertiaryContainer,
+        settingsIcon: c.onSurfaceVariant,
+      );
+    }
+    return const _MoreSectionPalette(
+      background: _MoreSectionColorsLight.background,
+      cardBackground: _MoreSectionColorsLight.cardBackground,
+      headingText: _MoreSectionColorsLight.headingText,
+      subtitleText: _MoreSectionColorsLight.subtitleText,
+      chevron: _MoreSectionColorsLight.chevron,
+      profileFriendsIcon: _MoreSectionColorsLight.profileFriendsIcon,
+      profileFriendsIconBg: _MoreSectionColorsLight.profileFriendsIconBg,
+      achievementsIcon: _MoreSectionColorsLight.achievementsIcon,
+      achievementsIconBg: _MoreSectionColorsLight.achievementsIconBg,
+      settingsIcon: _MoreSectionColorsLight.settingsIcon,
+    );
+  }
 }
 
 class MoreScreen extends ConsumerStatefulWidget {
@@ -48,8 +106,10 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _MoreSectionPalette.fromContext(context);
+
     return Scaffold(
-      backgroundColor: _MoreSectionColors.background,
+      backgroundColor: palette.background,
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -58,17 +118,19 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           // Profile Section
           _buildSectionHeader(
             context,
-            'Profile',
-            Icons.person_outline,
-            _MoreSectionColors.profileFriendsIcon,
+            palette: palette,
+            title: 'Profile',
+            icon: Icons.person_outline,
+            iconColor: palette.profileFriendsIcon,
           ),
           _buildMenuItem(
             context,
+            palette: palette,
             title: 'My Profile',
             subtitle: 'View and edit your profile',
             icon: Icons.person,
-            iconColor: _MoreSectionColors.profileFriendsIcon,
-            iconBackgroundColor: _MoreSectionColors.profileFriendsIconBg,
+            iconColor: palette.profileFriendsIcon,
+            iconBackgroundColor: palette.profileFriendsIconBg,
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.pushNamed(context, '/profile-screen');
@@ -79,17 +141,19 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           // Achievements Section
           _buildSectionHeader(
             context,
-            'Achievements',
-            Icons.emoji_events_outlined,
-            _MoreSectionColors.achievementsIcon,
+            palette: palette,
+            title: 'Achievements',
+            icon: Icons.emoji_events_outlined,
+            iconColor: palette.achievementsIcon,
           ),
           _buildMenuItem(
             context,
+            palette: palette,
             title: 'View Achievements',
             subtitle: 'See your unlocked achievements',
             icon: Icons.emoji_events,
-            iconColor: _MoreSectionColors.achievementsIcon,
-            iconBackgroundColor: _MoreSectionColors.achievementsIconBg,
+            iconColor: palette.achievementsIcon,
+            iconBackgroundColor: palette.achievementsIconBg,
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.pushNamed(context, '/achievements-screen');
@@ -100,17 +164,19 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           // Friends Section
           _buildSectionHeader(
             context,
-            'Friends',
-            Icons.people_outline,
-            _MoreSectionColors.profileFriendsIcon,
+            palette: palette,
+            title: 'Friends',
+            icon: Icons.people_outline,
+            iconColor: palette.profileFriendsIcon,
           ),
           _buildMenuItem(
             context,
+            palette: palette,
             title: 'Friends Dashboard',
             subtitle: 'Manage your friends and requests',
             icon: Icons.people,
-            iconColor: _MoreSectionColors.profileFriendsIcon,
-            iconBackgroundColor: _MoreSectionColors.profileFriendsIconBg,
+            iconColor: palette.profileFriendsIcon,
+            iconBackgroundColor: palette.profileFriendsIconBg,
             onTap: () {
               HapticFeedback.lightImpact();
               Navigator.pushNamed(context, '/friends-screen');
@@ -121,14 +187,15 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           // Settings Section (with header) - compact list style
           _buildSectionHeader(
             context,
-            'Settings',
-            Icons.settings_outlined,
-            _MoreSectionColors.settingsIcon,
+            palette: palette,
+            title: 'Settings',
+            icon: Icons.settings_outlined,
+            iconColor: palette.settingsIcon,
           ),
           Container(
             margin: EdgeInsets.only(top: 1.h),
             decoration: BoxDecoration(
-              color: _MoreSectionColors.cardBackground,
+              color: palette.cardBackground,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -142,49 +209,55 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
               children: [
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'Notifications',
                   icon: Icons.notifications,
-                  iconColor: _MoreSectionColors.settingsIcon,
+                  iconColor: palette.settingsIcon,
                   onTap: _handleNotificationSettings,
                 ),
-                Divider(height: 1, color: _MoreSectionColors.subtitleText.withValues(alpha: 0.2)),
+                Divider(height: 1, color: palette.subtitleText.withValues(alpha: 0.2)),
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'Privacy',
                   icon: Icons.privacy_tip,
-                  iconColor: _MoreSectionColors.settingsIcon,
+                  iconColor: palette.settingsIcon,
                   onTap: _handlePrivacySettings,
                 ),
-                Divider(height: 1, color: _MoreSectionColors.subtitleText.withValues(alpha: 0.2)),
+                Divider(height: 1, color: palette.subtitleText.withValues(alpha: 0.2)),
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'Theme',
                   icon: Icons.palette,
-                  iconColor: _MoreSectionColors.settingsIcon,
+                  iconColor: palette.settingsIcon,
                   onTap: _handleThemeSettings,
                 ),
-                Divider(height: 1, color: _MoreSectionColors.subtitleText.withValues(alpha: 0.2)),
+                Divider(height: 1, color: palette.subtitleText.withValues(alpha: 0.2)),
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'Language',
                   icon: Icons.language,
-                  iconColor: _MoreSectionColors.settingsIcon,
+                  iconColor: palette.settingsIcon,
                   onTap: _handleLanguageSettings,
                 ),
-                Divider(height: 1, color: _MoreSectionColors.subtitleText.withValues(alpha: 0.2)),
+                Divider(height: 1, color: palette.subtitleText.withValues(alpha: 0.2)),
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'Quiet Hours',
                   icon: Icons.bedtime,
-                  iconColor: _MoreSectionColors.settingsIcon,
+                  iconColor: palette.settingsIcon,
                   onTap: _handleQuietHours,
                 ),
-                Divider(height: 1, color: _MoreSectionColors.subtitleText.withValues(alpha: 0.2)),
+                Divider(height: 1, color: palette.subtitleText.withValues(alpha: 0.2)),
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'View Tutorial',
                   icon: Icons.school,
-                  iconColor: _MoreSectionColors.settingsIcon,
+                  iconColor: palette.settingsIcon,
                   onTap: () {
                     HapticFeedback.lightImpact();
                     Navigator.pushNamed(
@@ -194,12 +267,13 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                     );
                   },
                 ),
-                Divider(height: 1, color: _MoreSectionColors.subtitleText.withValues(alpha: 0.2)),
+                Divider(height: 1, color: palette.subtitleText.withValues(alpha: 0.2)),
                 _buildSettingsItem(
                   context,
+                  palette: palette,
                   title: 'Sign Out',
                   icon: Icons.logout,
-                  iconColor: AppTheme.errorLight,
+                  iconColor: Theme.of(context).colorScheme.error,
                   onTap: _handleLogout,
                 ),
               ],
@@ -217,11 +291,12 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   }
 
   Widget _buildSectionHeader(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color iconColor,
-  ) {
+    BuildContext context, {
+    required _MoreSectionPalette palette,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+  }) {
     return Padding(
       padding: EdgeInsets.only(bottom: 1.h),
       child: Row(
@@ -232,7 +307,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: _MoreSectionColors.headingText,
+                  color: palette.headingText,
                 ),
           ),
         ],
@@ -242,6 +317,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
   Widget _buildMenuItem(
     BuildContext context, {
+    required _MoreSectionPalette palette,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -258,7 +334,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
         margin: EdgeInsets.only(top: 0.5.h),
         padding: EdgeInsets.all(4.w),
         decoration: BoxDecoration(
-          color: _MoreSectionColors.cardBackground,
+          color: palette.cardBackground,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -287,14 +363,14 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                     title,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: _MoreSectionColors.headingText,
+                      color: palette.headingText,
                     ),
                   ),
                   SizedBox(height: 0.5.h),
                   Text(
                     subtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: _MoreSectionColors.subtitleText,
+                      color: palette.subtitleText,
                     ),
                   ),
                 ],
@@ -302,7 +378,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             ),
             Icon(
               Icons.chevron_right,
-              color: _MoreSectionColors.chevron,
+              color: palette.chevron,
               size: 24,
             ),
           ],
@@ -313,15 +389,15 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
 
   Widget _buildSettingsItem(
     BuildContext context, {
+    required _MoreSectionPalette palette,
     required String title,
     required IconData icon,
     required Color iconColor,
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    final titleColor = iconColor == AppTheme.errorLight
-        ? AppTheme.errorLight
-        : _MoreSectionColors.headingText;
+    final isErrorAction = iconColor == theme.colorScheme.error;
+    final titleColor = isErrorAction ? iconColor : palette.headingText;
 
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 0),
@@ -335,7 +411,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
       ),
       trailing: Icon(
         Icons.chevron_right,
-        color: _MoreSectionColors.chevron,
+        color: palette.chevron,
         size: 20,
       ),
       onTap: onTap,

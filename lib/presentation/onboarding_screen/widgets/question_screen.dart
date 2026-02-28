@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
-import '../../../core/app_export.dart';
 
 class QuestionScreen extends StatelessWidget {
   final String question;
@@ -36,19 +35,22 @@ class QuestionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFFFF5E6), // Light peach/cream
-              const Color(0xFFFFE5CC), // Slightly darker peach
-            ],
-          ),
-        ),
+        decoration: isDark
+            ? BoxDecoration(color: theme.colorScheme.surface)
+            : const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFF5E6),
+                    Color(0xFFFFE5CC),
+                  ],
+                ),
+              ),
         child: SafeArea(
           child: Column(
             children: [
@@ -115,6 +117,7 @@ class QuestionScreen extends StatelessWidget {
                         return Padding(
                           padding: EdgeInsets.only(bottom: index == options.length - 1 ? 0 : 1.5.h),
                           child: _OptionCard(
+                            isDark: isDark,
                             option: option,
                             isSelected: allowMultipleSelection
                                 ? (selectedValues?.contains(option) ?? false)
@@ -171,11 +174,13 @@ class QuestionScreen extends StatelessWidget {
 class _OptionCard extends StatefulWidget {
   final String option;
   final bool isSelected;
+  final bool isDark;
   final VoidCallback onTap;
 
   const _OptionCard({
     required this.option,
     required this.isSelected,
+    required this.isDark,
     required this.onTap,
   });
 
@@ -234,11 +239,13 @@ class _OptionCardState extends State<_OptionCard> with SingleTickerProviderState
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.5.h),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
+                color: widget.isDark
+                    ? theme.colorScheme.surfaceContainerHighest
+                    : Colors.white.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(16),
                 border: widget.isSelected
                     ? Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                        color: theme.colorScheme.primary.withValues(alpha: widget.isDark ? 0.6 : 0.3),
                         width: 1.5,
                       )
                     : null,
@@ -246,7 +253,7 @@ class _OptionCardState extends State<_OptionCard> with SingleTickerProviderState
                   BoxShadow(
                     color: widget.isSelected
                         ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                        : Colors.black.withValues(alpha: 0.05),
+                        : Colors.black.withValues(alpha: widget.isDark ? 0.15 : 0.05),
                     blurRadius: widget.isSelected ? 12 : 8,
                     offset: const Offset(0, 2),
                   ),
@@ -334,8 +341,6 @@ class _AnimatedElevatedButtonState extends State<_AnimatedElevatedButton>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
     return GestureDetector(
       onTapDown: _handleTapDown,
       onTapUp: _handleTapUp,

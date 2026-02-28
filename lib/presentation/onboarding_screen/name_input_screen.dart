@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
-import '../../core/app_export.dart';
 
 class NameInputScreen extends StatefulWidget {
   final String? initialName;
@@ -42,19 +41,22 @@ class _NameInputScreenState extends State<NameInputScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFFFF5E6), // Light peach/cream
-              const Color(0xFFFFE5CC), // Slightly darker peach
-            ],
-          ),
-        ),
+        decoration: isDark
+            ? BoxDecoration(color: theme.colorScheme.surface)
+            : const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFF5E6),
+                    Color(0xFFFFE5CC),
+                  ],
+                ),
+              ),
         child: SafeArea(
           child: Column(
             children: [
@@ -119,7 +121,9 @@ class _NameInputScreenState extends State<NameInputScreen> {
                         decoration: InputDecoration(
                           hintText: 'Enter your name',
                           filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.85),
+                          fillColor: isDark
+                              ? theme.colorScheme.surfaceContainerHighest
+                              : Colors.white.withValues(alpha: 0.85),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -129,7 +133,9 @@ class _NameInputScreenState extends State<NameInputScreen> {
                             vertical: 2.5.h,
                           ),
                         ),
-                        style: theme.textTheme.bodyLarge,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                       SizedBox(height: 2.h),
                     ],
