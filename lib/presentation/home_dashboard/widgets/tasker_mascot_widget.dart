@@ -121,20 +121,20 @@ class _TaskerMascotWidgetState extends State<TaskerMascotWidget>
                 scale: _scaleAnimation.value,
                 child: Transform.rotate(
                   angle: _rotationAnimation.value,
-                  child: Container(
+                    child: Container(
                     width: 16.w,
                     height: 16.w,
                     decoration: BoxDecoration(
                       color: _getMascotColor().withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Center(
-                      child: CustomIconWidget(
-                        iconName: widget.state == MascotState.celebrating
-                            ? 'emoji_emotions'
-                            : 'smart_toy',
-                        color: _getMascotColor(),
-                        size: 8.w,
+                    child: ClipOval(
+                      child: Padding(
+                        padding: EdgeInsets.all(2.w),
+                        child: Image.asset(
+                          'assets/images/tasker_mascot.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
