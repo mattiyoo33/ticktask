@@ -43,6 +43,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
   build_runner: ^2.4.8
   riverpod_generator: ^2.3.9
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE
@@ -57,3 +58,11 @@ flutter:
   # CRITICAL FONTS RULE: 
   # - THIS PROJECT USES GOOGLE FONTS INSTEAD OF LOCAL FONTS
   # - DO NOT ADD ANY LOCAL FONTS SECTION OR FONT FILES
+
+# App icon (Tasker ant mascot) - run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/images/tasker_mascot.png"
+  android: true
+  ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/tasker_mascot.png"

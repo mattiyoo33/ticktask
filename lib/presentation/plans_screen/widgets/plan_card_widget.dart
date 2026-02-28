@@ -2,9 +2,30 @@
 /// 
 /// Displays a single plan card showing plan title, date, description, and completion statistics.
 /// Shows the number of tasks in the plan and completion percentage with a progress indicator.
+/// Progress bar and percentage color: red (0%) → orange → yellow → greenish → green (100%).
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
+
+/// Returns a color for completion progress: 0% red → orange → yellow → greenish → 100% green.
+Color progressColorFromPercentage(int percentage) {
+  final t = (percentage.clamp(0, 100) / 100).toDouble();
+  const red = Color(0xFFEF4444);
+  const orange = Color(0xFFF97316);
+  const yellow = Color(0xFFEAB308);
+  const greenish = Color(0xFF84CC16);
+  const green = Color(0xFF22C55E);
+  if (t <= 0.25) {
+    return Color.lerp(red, orange, t / 0.25)!;
+  }
+  if (t <= 0.5) {
+    return Color.lerp(orange, yellow, (t - 0.25) / 0.25)!;
+  }
+  if (t <= 0.75) {
+    return Color.lerp(yellow, greenish, (t - 0.5) / 0.25)!;
+  }
+  return Color.lerp(greenish, green, (t - 0.75) / 0.25)!;
+}
 
 class PlanCardWidget extends ConsumerWidget {
   final Map<String, dynamic> plan;
@@ -232,6 +253,8 @@ class PlanCardWidget extends ConsumerWidget {
                     );
                   }
 
+                  final progressColor = progressColorFromPercentage(completionPercentage);
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -248,7 +271,7 @@ class PlanCardWidget extends ConsumerWidget {
                           Text(
                             '$completionPercentage%',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.primary,
+                              color: progressColor,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -258,9 +281,9 @@ class PlanCardWidget extends ConsumerWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                        value: completionPercentage / 100,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                          color: colorScheme.primary,
+                          value: completionPercentage / 100,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          color: progressColor,
                           minHeight: 8,
                         ),
                       ),

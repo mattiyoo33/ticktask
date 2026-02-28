@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
-import '../../services/onboarding_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -88,81 +87,100 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+
+    // Design spec: red gradient (red-500 to red-600), Tasker mascot, white text
+    const Color splashRed500 = Color(0xFFEF4444);
+    const Color splashRed600 = Color(0xFFDC2626);
+    const Color taglineRed100 = Color(0xFFFEE2E2);
 
     return Scaffold(
-      backgroundColor: colorScheme.primary,
-      body: SafeArea(
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // App Icon/Logo
-                      Container(
-                        width: 30.w,
-                        height: 30.w,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [splashRed500, splashRed600],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Tasker mascot (ant) - white rounded container, 28px radius per design spec
+                        Container(
+                          width: 128,
+                          height: 128,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Image.asset(
+                                'assets/images/tasker_mascot.png',
+                                fit: BoxFit.contain,
+                              ),
                             ),
-                          ],
-                        ),
-                        child: Center(
-                          child: CustomIconWidget(
-                            iconName: 'task_alt',
-                            color: colorScheme.primary,
-                            size: 80,
                           ),
                         ),
-                      ),
-                      SizedBox(height: 4.h),
-                      // App Name
-                      Text(
-                        'TickTask',
-                        style: theme.textTheme.displayMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      SizedBox(height: 1.h),
-                      // Tagline
-                      Text(
-                        'Your productivity companion',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      // Loading indicator
-                      SizedBox(
-                        width: 6.w,
-                        height: 6.w,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white.withValues(alpha: 0.8),
+                        SizedBox(height: 4.h),
+                        // App Name - 48px bold white per design spec
+                        Text(
+                          'TickTask',
+                          style: theme.textTheme.displayMedium?.copyWith(
+                            fontSize: 48,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
                           ),
-                          strokeWidth: 3,
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 1.h),
+                        // Tagline - 18px red-100 per design spec
+                        Text(
+                          'Your productivity companion',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontSize: 18,
+                            color: taglineRed100,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        // Loading indicator - white per design spec
+                        SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white.withValues(alpha: 0.9),
+                            ),
+                            strokeWidth: 3,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

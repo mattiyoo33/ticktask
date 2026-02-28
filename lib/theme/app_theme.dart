@@ -5,18 +5,19 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   AppTheme._();
 
-  // Design System Colors - New Color Palette
-  // dd2d4a, 880d1e, f49cbb, f26a8d, cbeef3
-  static const Color primaryLight = Color(0xFFDD2D4A); // Dark red/maroon - Primary brand color
+  // Design System Colors - Figma / Design Spec (TickTask)
+  // Primary: red-500 #EF4444, red-600 #DC2626; Background: red-50 #FEF2F2; Success: green-500 #22C55E
+  static const Color primaryLight = Color(0xFFEF4444); // red-500 - Primary brand (Figma)
+  static const Color primaryDarkRed = Color(0xFFDC2626); // red-600 - Splash gradient, emphasis
   static const Color secondaryLight = Color(0xFFF26A8D); // Medium pink - Secondary actions
-  static const Color backgroundLight = Color(0xFFF0F9FA); // Very light blue tint - Background (CBEEF3 with opacity)
+  static const Color backgroundLight = Color(0xFFFEF2F2); // red-50 - Screen background (Figma)
   static const Color surfaceLight = Color(0xFFFFFFFF); // White - Surface
-  static const Color accentLight = Color(0xFFF49CBB); // Light pink - Accents
+  static const Color accentLight = Color(0xFFFEE2E2); // red-100 - Accents, cards (Figma)
   static const Color textPrimaryLight = Color(0xFF1A1A1A); // Near-black - Primary text
   static const Color textSecondaryLight = Color(0xFF6B6B6B); // Medium gray - Secondary text
-  static const Color successLight = Color(0xFF7A9B76); // Success green
+  static const Color successLight = Color(0xFF22C55E); // green-500 - Success (Figma)
   static const Color warningLight = Color(0xFFC4956C); // Warning amber
-  static const Color errorLight = Color(0xFF880D1E); // Darker red - Error color
+  static const Color errorLight = Color(0xFFDC2626); // red-600 - Error color (Figma)
 
   // Dark theme colors (adapted from new palette)
   static const Color primaryDark = Color(0xFFF26A8D); // Medium pink - Lighter for dark mode
