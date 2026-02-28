@@ -138,7 +138,41 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkTutorialCompletion();
       _refreshAllData();
+      _recordDailyLoginIfNeeded();
     });
+  }
+
+  /// Record daily login (once per day), award streak XP (20–55), and check 7/30/100 milestones.
+  Future<void> _recordDailyLoginIfNeeded() async {
+    try {
+      final loginService = ref.read(dailyLoginServiceProvider);
+      final result = await loginService.recordLoginIfNeeded();
+      if (!mounted) return;
+      if (result['awarded'] == true) {
+        ref.invalidate(userProfileFromDbProvider);
+        ref.invalidate(achievementsProvider);
+        final xp = result['xp'] as int? ?? 0;
+        final streak = result['streak'] as int? ?? 1;
+        final milestone = result['milestone'] as int?;
+        if (milestone != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$streak day login streak! +$xp XP • Milestone: $milestone days!'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Daily login! +$xp XP ($streak day streak)'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Daily login record error: $e');
+    }
   }
 
   void _refreshAllData() {

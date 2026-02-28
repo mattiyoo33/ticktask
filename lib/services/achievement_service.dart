@@ -25,6 +25,10 @@ class AchievementService {
   static const String firstFriend = 'first_friend';
   static const String firstPlan = 'first_plan';
   static const String firstTask = 'first_task';
+  // Daily login streak milestones
+  static const String loginStreak7 = 'login_streak_7';
+  static const String loginStreak30 = 'login_streak_30';
+  static const String loginStreak100 = 'login_streak_100';
 
   // Get all unlocked achievements for current user
   Future<List<Map<String, dynamic>>> getUnlockedAchievements() async {
@@ -254,6 +258,21 @@ class AchievementService {
         'title': '7 day streak!',
         'description': 'You maintained a 7-day streak',
         'icon': Icons.emoji_events, // Cup/medal icon
+      },
+      loginStreak7: {
+        'title': '7 day login streak!',
+        'description': 'You opened the app 7 days in a row',
+        'icon': Icons.emoji_events,
+      },
+      loginStreak30: {
+        'title': '30 day login streak!',
+        'description': 'You opened the app 30 days in a row',
+        'icon': Icons.emoji_events,
+      },
+      loginStreak100: {
+        'title': '100 day login streak!',
+        'description': 'You opened the app 100 days in a row',
+        'icon': Icons.emoji_events,
       },
     };
   }

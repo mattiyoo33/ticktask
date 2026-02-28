@@ -5,6 +5,7 @@ import '../services/activity_service.dart';
 import '../services/public_task_service.dart';
 import '../services/plan_service.dart';
 import '../services/achievement_service.dart';
+import '../services/daily_login_service.dart';
 import '../services/tutorial_service.dart';
 import '../services/notification_permission_service.dart';
 import 'auth_provider.dart';
@@ -37,6 +38,11 @@ final planServiceProvider = Provider<PlanService>((ref) {
 // Achievement Service Provider
 final achievementServiceProvider = Provider<AchievementService>((ref) {
   return AchievementService();
+});
+
+// Daily Login Service Provider
+final dailyLoginServiceProvider = Provider<DailyLoginService>((ref) {
+  return DailyLoginService();
 });
 
 // Tutorial Service Provider
